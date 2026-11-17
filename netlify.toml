@@ -1,0 +1,10 @@
+# Configuration Netlify : site statique, rien à compiler.
+[build]
+  publish = "."
+  command = ""
+
+# Le jeu se recharge toujours à jour (pas de vieille version en cache)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
