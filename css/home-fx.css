@@ -1,0 +1,72 @@
+/* Effets interactifs de la page d'accueil (voir js/home-fx.js) */
+
+/* Lampe et poussière : derrière le contenu */
+main{position:relative;z-index:1}
+#lamp{position:fixed;inset:0;pointer-events:none;z-index:0;mix-blend-mode:screen;transition:opacity .5s;
+  background:radial-gradient(circle 460px at var(--lx,20%) var(--ly,15%),rgba(255,196,120,.2),rgba(255,170,90,.06) 45%,transparent 70%)}
+#dust{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;transition:opacity .5s}
+body.offhome #lamp,body.offhome #dust{opacity:0}
+
+/* Parallaxe : mouvement fluide */
+.books,.chalk,.title-paper,.note-vo,.mission,.sigwin,.folders{transition:translate .25s ease-out}
+
+/* Ficelles rouges du tableau */
+.board{position:relative}
+.board>*:not(.strings){position:relative;z-index:1}
+.strings{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0}
+.strings path{fill:none;stroke:#c0392b;stroke-width:2.4;stroke-linecap:round;filter:drop-shadow(0 3px 2px rgba(0,0,0,.55));
+  stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw 1.1s ease-out forwards}
+.strings path.still{animation:none;stroke-dashoffset:0}
+
+/* Machine à écrire */
+.caret{display:inline-block;width:2px;height:1em;margin-left:3px;background:var(--red);vertical-align:-3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+#homeSub.flash{animation:subflash .55s ease}
+@keyframes subflash{0%{opacity:0;transform:translateY(-8px) rotate(-3deg)}100%{opacity:1;transform:none}}
+
+/* Disciplines */
+.av{cursor:pointer;border-radius:12px;outline:none;transition:transform .2s}
+.av .face{transition:transform .25s cubic-bezier(.3,1.6,.5,1),box-shadow .25s}
+.av:hover .face,.av:focus-visible .face,.av.lit .face{transform:translateY(-5px) scale(1.1);
+  box-shadow:0 0 0 3px rgba(0,0,0,.35),0 0 0 5px var(--c),0 0 26px var(--c)}
+.av:focus-visible{background:rgba(255,255,255,.06)}
+
+/* Info-bulle */
+.fxtip{position:fixed;z-index:70;pointer-events:none;max-width:250px;padding:9px 13px;border-radius:4px;
+  background:var(--paper);color:var(--ink);font-size:.86rem;line-height:1.35;box-shadow:0 10px 24px rgba(0,0,0,.5);
+  opacity:0;transform:translateY(6px) rotate(-1deg);transition:opacity .15s,transform .15s}
+.fxtip.on{opacity:1;transform:rotate(-1deg)}
+.fxtip b{display:block;font-family:var(--serif);font-size:.98rem;margin-bottom:2px}
+.fxtip small{display:block;margin-top:4px;color:var(--ink-soft);font-style:italic}
+
+/* Carte SIG : loupe et démonstration */
+.lens{opacity:0;transition:opacity .2s;pointer-events:none}
+.lens.on{opacity:1}
+.lens-ring circle{fill:none;stroke:#fff;stroke-width:2.5;filter:drop-shadow(0 0 4px rgba(45,212,191,.9))}
+.lens-ring path{stroke:#fff;stroke-width:5;stroke-linecap:round}
+.lens-ring text{fill:#fff;font:700 8px Consolas,monospace;letter-spacing:2px}
+#homeMap svg{cursor:none}
+.siglayers label.blink{background:rgba(45,212,191,.22);transition:background .2s}
+
+/* Bouton de lancement */
+.btn-go{position:relative;overflow:hidden}
+.btn-go.scan{pointer-events:none}
+.btn-go.scan::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  animation:scanbar .75s linear}
+.btn-go.scan svg:first-child{animation:fp .375s ease-in-out 2}
+@keyframes scanbar{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@keyframes fp{50%{transform:scale(1.35);filter:drop-shadow(0 0 6px #fff)}}
+.btn-go.nudge{animation:nudge 1.8s ease-in-out infinite}
+@keyframes nudge{50%{box-shadow:0 0 38px rgba(45,212,191,.75),inset 0 1px 0 rgba(255,255,255,.25);transform:scale(1.02)}}
+
+/* Dossiers : léger éclat au survol */
+.folder::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);background-size:250% 100%;
+  background-position:120% 0;transition:background-position .6s}
+.folder:hover::after{background-position:-20% 0}
+
+@media (prefers-reduced-motion: reduce){
+  #dust{display:none}
+  .strings path{animation:none;stroke-dashoffset:0}
+  .caret,.btn-go.nudge{animation:none}
+}

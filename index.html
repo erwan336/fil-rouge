@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a120c">
+<title>Fil Rouge</title>
+<!--
+  =====================================================================
+  FIL ROUGE : une maladie, six causes cachées.
+  Jeu collaboratif interdisciplinaire, 1 à 10 joueurs, 5 à 10 minutes.
+
+  LE JEU : 12 pistes sur le mur (6 vraies causes, 6 fausses pistes).
+  Chaque joueur a un indice secret sur son téléphone. On parle, on touche
+  les tuiles : vraie cause = un fil rouge ; fausse piste = une vie perdue.
+
+  PRINCIPE "MULTI-TÉLÉPHONES" SANS SERVEUR :
+  - L'écran animateur (ordinateur ou vidéoprojecteur) crée une partie
+    et affiche un CODE à 5 chiffres (joueurs + maladie + tirage).
+  - Chaque joueur ouvre ce même fichier sur son téléphone, touche
+    « Rejoindre », saisit le code et son numéro de joueur.
+  - Le code contient le nombre de joueurs et une "graine" aléatoire :
+    chaque téléphone recalcule exactement la même distribution des rôles
+    et des indices. Aucune connexion entre appareils n'est nécessaire.
+
+  Structure : index.html
+              css/style.css (accueil, base) + css/game.css (mur d'enquête)
+              css/sig.css (carte SIG, modes de jeu)
+              js/icons.js + js/data.js (contenu) + js/app.js (logique)
+              js/map.js (carte SIG) + js/rhone-data.js (contours réels du Rhône)
+              data/rhone-epci.geojson (les mêmes contours au format GeoJSON)
+  Aucune dépendance externe. Scénario FICTIF.
+  =====================================================================
+-->
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/game.css">
+<link rel="stylesheet" href="css/sig.css">
+<link rel="stylesheet" href="css/home-fx.css">
+<link rel="stylesheet" href="css/polish.css">
+</head>
+<body>
+
+<!-- ================= EN-TÊTE (écran animateur uniquement) ================= -->
+<header class="topbar hidden" id="topbar">
+  <div class="brand"><span class="logo" id="logoIc"></span>
+    <span class="brand-txt">Fil Rouge<small>Centre Léon Bérard · Journée SHS</small></span></div>
+  <span class="chip code" id="codeChip"></span>
+  <span class="chip goal" id="scoreChip" aria-label="Causes trouvées"></span>
+  <span class="chip lives" id="livesChip" aria-label="Vies restantes"></span>
+  <span class="chip timer" id="timerChip"><span id="timerIc"></span><span id="timerTxt">04:00</span>
+    <button class="iconbtn" id="timerBtn" aria-label="Pause ou reprise du chronomètre"></button></span>
+  <!-- Barre de temps restant -->
+  <div class="timebar" aria-hidden="true"><i id="timeFill"></i></div>
+</header>
+
+<main>
+<!-- ================= 1. ACCUEIL ================= -->
+<section class="screen" id="s-home">
+  <div class="desk">
+    <!-- Pile de livres (décor, grand écran) -->
+    <div class="books" aria-hidden="true">
+      <div class="book" style="background:#7a2e2a">Santé</div>
+      <div class="book" style="background:#284b6b">Société</div>
+      <div class="book" style="background:#2f5d45">Territoire</div>
+      <div class="book" style="background:#24476e">Environnement</div>
+      <div class="book" style="background:#3b3f73">Politiques publiques</div>
+      <div class="book" style="background:#6b4a22">Statistique</div>
+    </div>
+
+    <!-- Tableau d'enquête -->
+    <div class="board">
+      <div class="board-top">
+        <div class="chalk">Des regards différents<br>pour comprendre<br><u>un même territoire.</u></div>
+        <div class="paper pin title-paper tilt-l">
+          <h1>Fil<br>Rouge</h1>
+          <span class="underline"></span>
+          <div class="sub">Une maladie.<br>Six causes cachées.</div>
+          <div class="sub" id="homeSub" style="font-size:1rem;color:#c0392b"></div>
+        </div>
+        <div class="paper pin note-vo tilt-r">
+          <b>Rhône (69)</b>
+          Un territoire,<br>des questions,<br>des solutions <span class="circle-q">?</span>
+        </div>
+      </div>
+
+      <!-- Chiffres clés du jeu -->
+      <div class="keyfigs" aria-label="Le jeu en chiffres">
+        <div><b>10</b><span>disciplines</span></div>
+        <div><b>6</b><span>causes cachées</span></div>
+        <div><b>3</b><span>niveaux</span></div>
+        <div><b>5'</b><span>de jeu</span></div>
+      </div>
+
+      <div class="map-zone">
+        <!-- Fenêtre SIG interactive (construite par js/app.js) -->
+        <div class="sigwin" id="sigHome"></div>
+        <div class="paper pin mission">
+          <h4>Votre mission</h4>
+          <ol>
+            <li>Lisez votre indice secret</li>
+            <li>Parlez, sans montrer l'écran</li>
+            <li>Trouvez les 6 vraies causes</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="folders" id="folders"></div>
+    </div>
+
+    <!-- Panneau de droite : équipe + paramètres -->
+    <aside class="side">
+      <div class="glass badge-top">
+        <span class="ic" id="badgeIc"></span>
+        <div>Journée interdisciplinaire SHS<small>Centre Léon Bérard · Lyon</small></div>
+        <span class="dot"></span>
+      </div>
+
+      <div class="glass">
+        <h3>L'équipe d'enquête</h3>
+        <div class="avatars" id="avatars"></div>
+        <p class="quote">« Chacun détient un indice.<br>Personne n'a la réponse seul. »</p>
+      </div>
+
+      <div class="glass">
+        <h3>Paramétrer la partie</h3>
+        <!-- Mode de jeu -->
+        <div class="seg" id="modeSeg">
+          <button data-mode="solo">Solo<small>1 joueur</small></button>
+          <button data-mode="team">Équipe<small>2 à 3 joueurs</small></button>
+          <button data-mode="group">Grand groupe<small>4 à 10 joueurs</small></button>
+        </div>
+        <input type="text" id="teamName" class="darkin hidden" maxlength="30" placeholder="Nom de l'équipe (ex. : Les Cartographes)">
+        <p class="tip" id="modeTip"></p>
+        <div class="setting">
+          <span class="lbl"><span id="icDisease"></span>Maladie étudiée</span>
+          <div class="stepper"><button id="mMinus" aria-label="Maladie précédente">‹</button><span id="mVal" style="min-width:150px;font-size:.82rem"></span><button id="mPlus" aria-label="Maladie suivante">›</button></div>
+        </div>
+        <input type="text" id="customName" class="hidden" maxlength="40" placeholder="Nom de la maladie (ex. : drépanocytose)"
+          style="width:100%;margin:-2px 0 10px;padding:10px 12px;border-radius:10px;border:1px solid var(--glass-line);background:rgba(0,0,0,.3);color:#e6f2ef;font:inherit">
+        <div class="setting" id="playersRow">
+          <span class="lbl"><span id="icPlayers"></span>Nombre de joueurs</span>
+          <div class="stepper"><button id="pMinus" aria-label="Moins">‹</button><span id="pVal"></span><button id="pPlus" aria-label="Plus">›</button></div>
+        </div>
+        <div class="setting" id="durRow">
+          <span class="lbl"><span id="icClock"></span>Durée du chronomètre</span>
+          <div class="stepper"><button id="dMinus" aria-label="Moins">‹</button><span id="dVal"></span><button id="dPlus" aria-label="Plus">›</button></div>
+        </div>
+        <button class="btn btn-go" id="startBtn"></button>
+        <div class="or">ou</div>
+        <button class="btn btn-line" id="joinBtn" style="width:100%"></button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="desk-foot">
+    <span>Journée interdisciplinaire SHS · Centre Léon Bérard, Lyon · Scénario et données fictifs</span>
+    <i>Un territoire en meilleure santé, par la force du collectif.</i>
+  </div>
+</section>
+
+<!-- ================= 2. LOBBY (écran animateur) ================= -->
+<section class="screen hidden" id="s-lobby"></section>
+
+<!-- ================= 3. MUR D'ENQUÊTE (écran commun) ================= -->
+<section class="screen hidden" id="s-wall"></section>
+
+<!-- ================= 4. REJOINDRE (téléphone) ================= -->
+<section class="screen hidden" id="s-join"></section>
+
+<!-- ================= 5. MON INDICE (téléphone) ================= -->
+<section class="screen hidden" id="s-player"></section>
+</main>
+
+<script src="js/icons.js"></script>
+<script src="js/data.js"></script>
+<script src="js/rhone-data.js"></script>
+<script src="js/map.js"></script>
+<script src="js/app.js"></script>
+<script src="js/home-fx.js"></script>
+</body>
+</html>

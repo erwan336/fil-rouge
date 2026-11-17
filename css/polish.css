@@ -1,0 +1,132 @@
+/* =====================================================================
+   FINITION PROFESSIONNELLE
+   Chargée en dernier : harmonise la typographie, la profondeur et les
+   détails de tous les écrans (accueil, lobby, mur, résultat, téléphone).
+   ===================================================================== */
+
+/* ---------- Ambiance générale : vignettage + grain de papier ---------- */
+body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0}
+body::before{background:radial-gradient(ellipse 120% 95% at 50% 35%,transparent 50%,rgba(0,0,0,.6) 100%)}
+body::after{opacity:.08;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+::selection{background:rgba(45,212,191,.35)}
+:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+h1,h2,h3,b{letter-spacing:-.005em}
+
+/* Titres des panneaux : petite barre d'accent */
+.glass h3{display:flex;align-items:center;gap:9px;font-size:.92rem}
+.glass h3::before{content:"";width:4px;height:16px;border-radius:2px;background:linear-gradient(var(--teal),#0f766e);flex-shrink:0}
+.glass{border-radius:16px}
+
+/* ---------- En-tête de jeu ---------- */
+.topbar{gap:10px;padding:10px 22px 13px;background:linear-gradient(180deg,rgba(12,9,6,.96),rgba(12,9,6,.88));
+  border-bottom:1px solid rgba(255,255,255,.06);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.brand-txt{display:flex;flex-direction:column;line-height:1.05;font-size:1.15rem}
+.brand-txt small{font-family:"Segoe UI",system-ui,sans-serif;font-weight:500;font-size:.68rem;color:#9fb8b4;letter-spacing:.05em;margin-top:3px}
+.topbar .chip{height:36px;background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.1)}
+.chip.goal{gap:10px}
+.slots{display:inline-flex;gap:4px}
+.slots i{width:13px;height:13px;border-radius:3px;border:1.5px solid rgba(255,255,255,.25);transition:all .4s}
+.slots i.on{background:var(--f);border-color:var(--f);box-shadow:0 0 9px var(--f);transform:scale(1.1)}
+.timebar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.06)}
+.timebar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#0f766e,var(--teal));box-shadow:0 0 10px var(--teal);transition:width 1s linear}
+.timebar i.hurry{background:linear-gradient(90deg,#a3241a,#ff6b5e);box-shadow:0 0 12px #e0362b}
+
+/* ---------- Accueil ---------- */
+.keyfigs{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(45,212,191,.22);border:1px solid rgba(45,212,191,.3);
+  border-radius:14px;overflow:hidden;box-shadow:0 14px 30px rgba(0,0,0,.4)}
+.keyfigs div{background:rgba(8,30,38,.9);padding:12px 8px;text-align:center}
+.keyfigs b{display:block;font-family:var(--serif);font-size:clamp(1.5rem,2.6vw,2rem);color:#7ee7d6;line-height:1;text-shadow:0 0 18px rgba(45,212,191,.35)}
+.keyfigs span{display:block;margin-top:5px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9fb8b4}
+@media (max-width:520px){.keyfigs{grid-template-columns:repeat(2,1fr)}}
+.book{font-weight:700;font-size:.66rem;letter-spacing:.07em;height:auto;min-height:42px;line-height:1.25;padding:6px 8px 6px 14px;border-left:3px solid rgba(255,255,255,.12)}
+.title-paper h1{text-shadow:0 1px 0 rgba(255,255,255,.6)}
+.desk-foot{border-top:1px solid rgba(255,255,255,.08);padding-top:16px}
+.setting{transition:border-color .2s,background .2s}
+.setting:hover{border-color:rgba(45,212,191,.3);background:rgba(45,212,191,.05)}
+.stepper button{transition:background .15s,color .15s}
+.stepper button:hover{color:#fff}
+
+/* ---------- Lobby ---------- */
+.bigcode{display:flex;gap:8px;letter-spacing:0;text-shadow:none;margin:10px 0 18px}
+.bigcode span{flex:1;max-width:76px;aspect-ratio:3/4;display:grid;place-items:center;border-radius:12px;
+  background:linear-gradient(180deg,#123039,#0a1c22);border:1px solid rgba(45,212,191,.4);color:#7ee7d6;
+  font-size:clamp(2rem,5vw,3.3rem);box-shadow:inset 0 -6px 0 rgba(0,0,0,.25),0 0 20px rgba(45,212,191,.14)}
+.link-box{font-family:Consolas,monospace;font-size:.8rem}
+.roster-row{border:1px solid rgba(255,255,255,.06)}
+
+/* ---------- Mur d'enquête ---------- */
+.wall-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:26px;max-width:1400px;margin:0 auto;align-items:start}
+.wall-layout .wall{max-width:none;margin:0}
+@media (max-width:1100px){.wall-layout{grid-template-columns:1fr}}
+/* Tuiles = fiches bristol lignées */
+.tile{padding:30px 14px 14px;border-radius:5px;
+  background-color:var(--paper);
+  background-image:linear-gradient(180deg,rgba(255,255,255,.5),rgba(0,0,0,.05)),
+    linear-gradient(180deg,transparent 22px,rgba(192,57,43,.35) 22px 23.5px,transparent 23.5px),
+    repeating-linear-gradient(180deg,transparent 0 23px,rgba(47,127,216,.09) 23px 24px)}
+.tile .tn{position:absolute;top:6px;left:12px;font:700 .6rem Consolas,monospace;letter-spacing:.14em;text-transform:uppercase;color:#9a8466}
+.tile .tx{font-family:var(--serif);font-weight:700;font-size:clamp(.98rem,1.45vw,1.18rem);letter-spacing:-.01em}
+.tile.ok,.tile.ko{background-image:none}
+.tile.ok{background-color:var(--f)}
+.tile.ko{background-color:#5b5148}
+.tile.ok .tn,.tile.ko .tn{color:rgba(255,255,255,.65)}
+.tile.ko::after{top:6px}
+.tile.pick{outline-color:#ffb02e;box-shadow:0 0 0 6px rgba(255,176,46,.18),0 18px 30px rgba(0,0,0,.55)}
+.lvbanner{max-width:1400px}
+/* Journal d'enquête */
+.caselog{position:sticky;top:86px;padding:16px}
+.cl-head{display:flex;justify-content:space-between;gap:8px;font:600 .68rem Consolas,monospace;color:#8fb8b2;letter-spacing:.08em;
+  text-transform:uppercase;border-bottom:1px dashed rgba(255,255,255,.15);padding-bottom:8px;margin-bottom:10px}
+#caseLog{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:430px;overflow:auto}
+#caseLog li{display:grid;grid-template-columns:auto auto 1fr;gap:8px;align-items:start;padding:7px 9px;border-radius:8px;
+  background:rgba(255,255,255,.04);border-left:3px solid var(--f);font-size:.82rem;animation:fadein .3s}
+#caseLog .lt{font:.66rem Consolas,monospace;color:#8fb8b2;padding-top:3px;white-space:nowrap}
+#caseLog .li{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;font-size:.68rem;font-weight:900;background:var(--f);color:#fff}
+#caseLog li.ko .li{background:#c0392b}
+#caseLog .lx{color:#9fb8b4;line-height:1.3}
+#caseLog .lx b{display:block;color:#f1e6c9;font-weight:600}
+#caseLog li.ko .lx b{text-decoration:line-through;opacity:.7}
+#caseLog .empty{display:block;border:1px dashed rgba(255,255,255,.15);border-left:1px dashed rgba(255,255,255,.15);background:none;text-align:center;color:#8fa9a5;padding:18px 10px;line-height:1.5}
+.cl-rule{margin-top:12px;font-size:.78rem;color:#c8dcd8;padding:9px 11px;border-radius:9px;background:rgba(45,212,191,.08)}
+.cl-rule b{display:block;color:#7ee7d6;font-size:.64rem;text-transform:uppercase;letter-spacing:.12em;margin-bottom:2px}
+/* Erreur : secousse */
+body.hit .wall-layout{animation:hitshake .35s}
+body.hit #livesChip{animation:hitflash .6s}
+@keyframes hitshake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+@keyframes hitflash{30%{background:rgba(224,54,43,.45);border-color:#e0362b}}
+
+/* ---------- Résultat ---------- */
+.result{box-shadow:0 30px 70px rgba(0,0,0,.6)}
+.bigslots{display:flex;justify-content:center;gap:8px;margin:14px 0 8px}
+.bigslots i{width:34px;height:34px;border-radius:8px;border:2px dashed rgba(0,0,0,.25)}
+.bigslots i.on{background:var(--f);border:2px solid var(--f);box-shadow:0 0 14px var(--f)}
+.legend div{border-radius:6px}
+
+/* ---------- Notifications ---------- */
+.toast{display:flex;align-items:center;gap:10px;background:rgba(14,22,26,.96);color:#f1e6c9;border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;padding:9px 16px 9px 9px;font-weight:600;max-width:min(92vw,560px);backdrop-filter:blur(8px)}
+.toast .ti{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#e0a100;color:#1a120c;font-weight:900;flex-shrink:0}
+.toast.ok{border-color:rgba(16,185,129,.55)} .toast.ok .ti{background:var(--green);color:#fff}
+.toast.ko{border-color:rgba(224,54,43,.55)} .toast.ko .ti{background:#e0362b;color:#fff}
+
+/* ---------- Téléphone : dossier confidentiel ---------- */
+.dossier{position:relative;text-align:left;padding:0 0 14px;overflow:hidden;border-top:6px solid var(--c);margin:16px 0}
+.d-head{display:flex;justify-content:space-between;gap:8px;padding:8px 14px;font:700 .64rem Consolas,monospace;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-soft);border-bottom:1px dashed rgba(0,0,0,.2);background:rgba(0,0,0,.04)}
+.d-stamp{position:absolute;top:42px;right:12px;border:2.5px solid #c0392b;color:#c0392b;font:800 .76rem "Segoe UI",sans-serif;
+  letter-spacing:.16em;text-transform:uppercase;padding:2px 8px;transform:rotate(10deg);opacity:.85}
+.d-role{display:flex;align-items:center;gap:12px;padding:14px 96px 0 16px}
+.d-role i{width:48px;height:48px;border-radius:14px;background:var(--c);color:#fff;display:grid;place-items:center;font-style:normal;
+  box-shadow:0 6px 14px rgba(0,0,0,.25);flex-shrink:0}
+.d-role small{display:block;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft)}
+.d-role b{font-family:var(--serif);font-size:1.12rem}
+.dossier p{padding:0 16px;margin:14px 0 12px;text-align:left;font-size:clamp(1.2rem,5.2vw,1.55rem)}
+.d-foot{margin:0 16px;padding-top:9px;border-top:1px solid rgba(0,0,0,.1);font-size:.76rem;color:var(--ink-soft)}
+.secret{letter-spacing:.02em}
+.phone{padding:0 2px}
+
+@media (prefers-reduced-motion: reduce){
+  body.hit .wall-layout,body.hit #livesChip{animation:none}
+  .timebar i{transition:none}
+}
