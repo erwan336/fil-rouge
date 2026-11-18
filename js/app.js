@@ -202,13 +202,16 @@ function renderSettings() {
   state.teamName = state.mode === 'team' ? $('teamName').value.trim() : '';
   $('pVal').textContent = state.nb;
   $('dVal').textContent = DURATIONS[state.durIdx] + ' minutes';
-  const isCustom = state.disIdx === DISEASES.length;
-  $('mVal').textContent = isCustom ? 'Autre maladie…' : DISEASES[state.disIdx].label;
+  const isCustom = state.disIdx === DISEASES.length, isRandom = state.disIdx === RANDOM_DIS;
+  $('mVal').textContent = isRandom ? '🎲 Au hasard' : isCustom ? 'Autre maladie…' : DISEASES[state.disIdx].label;
   $('customName').classList.toggle('hidden', !isCustom);
   state.customName = $('customName').value.trim();
+  if (isRandom) { $('homeSub').textContent = 'Enquête surprise : maladie tirée au sort'; return; }
   setDisease(diseaseFor(state.disIdx, state.customName));
   $('homeSub').textContent = 'Enquête sur ' + DISEASE.title;
 }
+/** Indice de réglage « Maladie au hasard » (jamais écrit dans le code de partie) */
+const RANDOM_DIS = DISEASES.length + 1;
 
 /* ---------------------------------------------------------------------
    NIVEAUX
@@ -217,16 +220,23 @@ function renderSettings() {
      fausses pistes, moins de vies et moins de temps. La carte SIG se
      complète d'un niveau à l'autre.
    - Solo et grand groupe : un seul niveau avec les 12 pistes.
+   Les causes et fausses pistes de chaque niveau viennent du scénario tiré
+   au sort (data.js) : l'ordre des familles change à chaque partie, et les
+   fausses pistes sans démenti n'arrivent qu'au niveau 3.
    --------------------------------------------------------------------- */
-const ALL_FAKES = ['eau', '5g', 'eol', 'myth', 'faute', 'hasard'];
 const TEAM_LEVELS = [
-  { name:'Repérage',  stars:1, fams:['terr', 'soin'], fakes:['eau', '5g'],                  lives:3, time:120 },
-  { name:'Enquête',   stars:2, fams:['soc', 'env'],   fakes:['eau', '5g', 'eol', 'myth'],    lives:2, time:90  },
-  { name:'Expertise', stars:3, fams:['comp', 'pol'],  fakes:ALL_FAKES,                       lives:1, time:60  }
+  { name:'Repérage',  stars:1, nFams:2, nFakes:2, lives:3, time:120 },
+  { name:'Enquête',   stars:2, nFams:2, nFakes:4, lives:2, time:90  },
+  { name:'Expertise', stars:3, nFams:2, nFakes:6, lives:1, time:60  }
 ];
-function levelsFor() {
-  if (state.mode === 'team') return TEAM_LEVELS;
-  return [{ name:'Enquête', stars:0, fams:FAMILIES.map(f => f.id), fakes:ALL_FAKES, lives:3, time:DURATIONS[state.durIdx] * 60 }];
+function levelsFor(S) {
+  const fakeIds = S.fakes.map(f => f.id);
+  if (state.mode === 'team') {
+    let done = 0;
+    return TEAM_LEVELS.map(L => { const fams = S.famOrder.slice(done, done += L.nFams);
+      return { ...L, fams, fakes: fakeIds.slice(0, L.nFakes) }; });
+  }
+  return [{ name:'Enquête', stars:0, fams:FAMILIES.map(f => f.id), fakes:fakeIds, lives:3, time:DURATIONS[state.durIdx] * 60 }];
 }
 const multi = () => state.levels.length > 1;
 const lvl = () => state.levels[state.lvl];
@@ -244,11 +254,18 @@ function levelCard(L, i) {
    ===================================================================== */
 function startGame() {
   renderSettings();
+  // Maladie de la partie (tirée au sort si « Au hasard », jamais deux fois la même d'affilée)
+  if (state.disIdx === RANDOM_DIS) {
+    let d; do { d = Math.floor(Math.random() * DISEASES.length); } while (d === state.gameDis && DISEASES.length > 1);
+    state.gameDis = d;
+  } else state.gameDis = state.disIdx;
+  setDisease(diseaseFor(state.gameDis, state.customName));
   const seed = 100 + Math.floor(Math.random() * 900);
-  state.code = makeCode(state.nb, state.disIdx, seed);
+  state.code = makeCode(state.nb, state.gameDis, seed);
   state.players = deal(state.nb, seed);
-  state.allTiles = buildTiles(DISEASE);
-  state.levels = levelsFor();
+  state.scen = buildScenario(DISEASE, seed);          // causes et fausses pistes de CETTE partie
+  state.allTiles = buildTiles(DISEASE, state.scen);
+  state.levels = levelsFor(state.scen);
   state.lvl = 0; state.foundIds = new Set(); state.errors = 0; state.livesKept = 0; state.timeBank = 0; state.log = [];
   state.picked = null; state.over = false;
   prepareLevel(); stopTimer(); renderHud();
@@ -273,7 +290,7 @@ function rulesHtml() {
 
 /** Lien direct vers l'écran « Rejoindre » avec le code pré-rempli */
 function joinLink() {
-  const extra = state.disIdx === DISEASES.length && state.customName ? '-' + encodeURIComponent(state.customName) : '';
+  const extra = state.gameDis === DISEASES.length && state.customName ? '-' + encodeURIComponent(state.customName) : '';
   return location.href.split('#')[0] + '#' + state.code + extra;
 }
 
@@ -369,7 +386,7 @@ function startWall() {
     </div>
     <p class="wall-help" id="wallHelp">Touchez une piste pour la choisir, touchez-la encore pour valider.</p>
     ${solo() ? `<div class="glass" style="margin-top:24px"><h3>Vos indices</h3><div class="solo-clues">
-      ${ROLES.map(r => `<div style="--c:${COLORS[r.color]}"><b>${r.name}</b>${clueFor(DISEASE, r.id)}</div>`).join('')}</div></div>` : ''}`;
+      ${ROLES.map(r => `<div style="--c:${COLORS[r.color]}"><b>${r.name}</b>${clueFor(DISEASE, r.id, state.scen)}</div>`).join('')}</div></div>` : ''}`;
   // Les couches trouvées aux niveaux précédents restent allumées
   state.foundIds.forEach(id => setLayer($('core'), id, true));
   $('wall').addEventListener('click', e => { const b = e.target.closest('.tile'); if (b) clickTile(b.dataset.id); });
@@ -600,6 +617,7 @@ function renderJoin(prefill = '', name = '') {
 function openPlayer(code, n, name = '') {
   const g = parseCode(code); if (!g || n < 1 || n > g.nb) return renderJoin(code, name);
   const P = diseaseFor(g.dis, name);
+  const S = buildScenario(P, g.seed);          // même tirage que le grand écran
   const me = deal(g.nb, g.seed)[n - 1];
   store.set('fr-player', `${code}:${n}:${encodeURIComponent(name)}`);
   const many = me.roles.length > 1;
@@ -615,7 +633,7 @@ function openPlayer(code, n, name = '') {
           <header class="d-head"><span>Dossier confidentiel</span><span>N° ${code}-${n}${many ? '.' + (i + 1) : ''}</span></header>
           <span class="d-stamp">Secret</span>
           <div class="d-role"><i>${icon(r.icon, 26)}</i><div><small>Votre regard</small><b>${r.name}</b></div></div>
-          <p>« ${clueFor(P, id)} »</p>
+          <p>« ${clueFor(P, id, S)} »</p>
           <div class="d-hold">${icon('finger', 16)} Maintenez le doigt pour lire</div>
           <footer class="d-foot">Cet indice confirme une vraie cause… ou démonte une fausse piste.</footer>
         </article>`; }).join('')}
@@ -659,7 +677,7 @@ function init() {
   $('pPlus').onclick = () => { state.nb = Math.min(MODES[state.mode].max, state.nb + 1); renderSettings(); };
   $('dMinus').onclick = () => { state.durIdx = Math.max(0, state.durIdx - 1); renderSettings(); };
   $('dPlus').onclick = () => { state.durIdx = Math.min(DURATIONS.length - 1, state.durIdx + 1); renderSettings(); };
-  const nDis = DISEASES.length + 1;               // 6 maladies + « Autre maladie »
+  const nDis = DISEASES.length + 2;               // les maladies + « Autre maladie » + « Au hasard »
   $('mMinus').onclick = () => { state.disIdx = (state.disIdx + nDis - 1) % nDis; renderSettings(); };
   $('mPlus').onclick = () => { state.disIdx = (state.disIdx + 1) % nDis; renderSettings(); };
   $('customName').oninput = renderSettings;

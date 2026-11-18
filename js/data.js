@@ -107,28 +107,86 @@ function customDisease(name) {
   return mk('autre', 'Autre maladie', n ? n.toUpperCase() : 'LA MALADIE', n || 'une maladie', {});
 }
 
+/* ---------------------------------------------------------------------
+   VARIANTES : à chaque partie, le jeu tire au sort une version de chaque
+   vraie cause et 5 fausses pistes dans la réserve. Toutes les parties
+   sont donc différentes, même avec la même maladie.
+   Chaque variante : [ texte de la tuile, indice du joueur ].
+   --------------------------------------------------------------------- */
+const VARIANTS = {
+  terr:[["Pas de bus pour aller consulter",  "Dans le Nord, le bus passe deux fois par jour… quand il passe."],
+        ["Déserts médicaux",                 "Trois médecins sont partis à la retraite : aucun n'a été remplacé."]],
+  soc: [["Travail de nuit et horaires décalés","Les plus touchés travaillent de nuit ou en horaires décalés."],
+        ["Personnes isolées",                "Les plus touchés vivent seuls, loin de leur famille."]],
+  env: [["Logements dégradés",               "Dans les logements humides et mal isolés : plus de malades."],
+        ["Air pollué",                       "Le long de l'autoroute : plus de malades qu'ailleurs."]],
+  soin:[["Rendez-vous trop longs à obtenir",  "Ici, il faut attendre six mois pour voir un spécialiste."],
+        ["Soins trop chers",                 "Beaucoup renoncent à se soigner : ça coûte trop cher."]],
+  comp:[["Méfiance envers les médecins",     "Ici, on ne fait pas confiance aux blouses blanches."],
+        ["« Ça va passer »",                 "Ici, on attend que ça passe avant de consulter."]],
+  pol: [["Messages de prévention incompris", "Les brochures de prévention sont écrites dans un langage compliqué."],
+        ["Budget prévention en baisse",      "Le budget de la prévention a été divisé par deux en cinq ans."]]
+};
+
+/* Réserve de fausses pistes : texte, explication (affichée quand on se trompe),
+   indice de démenti (donné à un joueur, ou à personne : il faut alors déduire). */
+const FAKE_POOL = [
+  { id:'eau',    text:"L'eau du robinet",         why:"Contrôlée depuis 10 ans : rien à signaler.",
+    clue:"L'eau est contrôlée depuis 10 ans : rien à signaler." },
+  { id:'5g',     text:"L'antenne 5G",             why:"Elle respecte toutes les normes.",
+    clue:"L'antenne 5G respecte toutes les normes d'exposition." },
+  { id:'eol',    text:"Les éoliennes",            why:"Elles respectent toutes les normes.",
+    clue:"Les éoliennes respectent toutes les normes de bruit." },
+  { id:'faute',  text:"La faute des malades",     why:"Accuser les malades n'explique rien et n'aide personne.",
+    clue:"Accuser les malades n'explique rien et n'aide personne." },
+  { id:'hasard', text:"La malchance",             why:"Le hasard ne frappe pas toujours les mêmes villages.",
+    clue:"Le hasard ne frappe pas toujours les mêmes villages." },
+  { id:'lune',   text:"La pleine lune",           why:"Il y a autant de malades à chaque phase de la lune.",
+    clue:"Il y a autant de malades à chaque phase de la lune." },
+  { id:'climat', text:"Le climat du Beaujolais",  why:"Même climat dans le village voisin, et bien moins de malades.",
+    clue:"Le village voisin a le même climat et bien moins de malades." },
+  { id:'ecrans', text:"Les écrans",               why:"On utilise autant les écrans à Lyon : ça n'explique pas l'écart.",
+    clue:"On utilise autant les écrans à Lyon qu'au Nord : ça n'explique pas l'écart." },
+  { id:'pollen', text:"Les pollens",              why:"Les pollens sont les mêmes dans tout le département.",
+    clue:"Les pollens sont les mêmes dans tout le département." },
+  { id:'chats',  text:"Les chats errants",        why:"Il y en a autant à Lyon : ça n'explique rien.",
+    clue:"Il y a autant de chats errants à Lyon : ça n'explique rien." }
+];
+
+/** Tire le scénario d'une partie (même graine = même scénario sur tous les appareils) */
+function buildScenario(P, seed) {
+  const rand = rng(seed * 104729 + 17);
+  const pick = arr => arr[Math.floor(rand() * arr.length)];
+  // Vraies causes : la version propre à la maladie compte double, puis les variantes
+  const causes = {};
+  FAMILIES.forEach(f => {
+    const opts = [P[f.id], P[f.id], ...VARIANTS[f.id].filter(v => v[0] !== P[f.id][0])];
+    causes[f.id] = pick(opts);
+  });
+  // Fausses pistes : l'idée reçue de la maladie + 5 au hasard dans la réserve
+  const myth = { id:'myth', text:P.myth[0], why:P.myth[1], clue:P.myth[1] };
+  const drawn = shuffle(FAKE_POOL, rand).slice(0, 5);
+  // 3 fausses pistes ont un démenti (Data manager, Décideur, Patients) ; le Clinicien démonte l'idée reçue.
+  // Les 2 dernières n'ont aucun indice : il faut les écarter par déduction.
+  const debunk = { clin: myth, dm: drawn[0], dec: drawn[1], pat: drawn[2] };
+  // Ordre pour les niveaux : d'abord les fausses pistes démenties (plus faciles), puis les autres
+  const fakes = [...shuffle([myth, drawn[0], drawn[1], drawn[2]], rand), ...shuffle(drawn.slice(3), rand)];
+  const famOrder = shuffle(FAMILIES.map(f => f.id), rand);
+  return { causes, fakes, debunk, famOrder };
+}
+
 /** Les 12 tuiles du mur : 6 vraies causes + 6 fausses pistes */
-function buildTiles(P) {
-  const trues = FAMILIES.map(f => ({ id:f.id, text:P[f.id][0], ok:true, family:f }));
-  const falses = [
-    { id:'eau',    text:"L'eau du robinet",     why:"Contrôlée depuis 10 ans : rien à signaler." },
-    { id:'myth',   text:P.myth[0],              why:P.myth[1] },
-    { id:'5g',     text:"L'antenne 5G",         why:"Elle respecte toutes les normes." },
-    { id:'eol',    text:"Les éoliennes",        why:"Elles respectent toutes les normes." },
-    { id:'faute',  text:"La faute des malades", why:"Accuser les malades n'explique rien et n'aide personne." },
-    { id:'hasard', text:"La malchance",         why:"Le hasard ne frappe pas toujours les mêmes quartiers." }
-  ].map(t => ({ ...t, ok:false }));
+function buildTiles(P, S) {
+  const trues = FAMILIES.map(f => ({ id:f.id, text:S.causes[f.id][0], ok:true, family:f }));
+  const falses = S.fakes.map(t => ({ id:t.id, text:t.text, why:t.why, ok:false }));
   return [...trues, ...falses];
 }
 
-/** L'indice secret d'une discipline pour la maladie P */
-function clueFor(P, roleId) {
+/** L'indice secret d'une discipline, pour la maladie P et le scénario S */
+function clueFor(P, roleId, S) {
   const fam = FAMILIES.find(f => f.role === roleId);
-  if (fam) return P[fam.id][1];
-  return { dm:"L'eau est contrôlée depuis 10 ans : rien à signaler.",
-           clin:P.myth[1],
-           dec:"Antennes et éoliennes respectent toutes les normes.",
-           pat:"On fait ce qu'on peut. Nous accuser n'aide personne." }[roleId];
+  if (fam) return S.causes[fam.id][1];
+  return S.debunk[roleId].clue;
 }
 
 /* Scénario actif */
