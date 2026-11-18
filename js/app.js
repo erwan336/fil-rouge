@@ -133,7 +133,8 @@ const FOLDERS = [
       <p class="small"><b>Solo :</b> tous les indices s'affichent sous le mur.
         <b>Équipe de 2 à 3 :</b> chaque équipe lance sa propre partie, puis on compare les scores.
         <b>Grand groupe :</b> tout le monde joue autour du même écran.</p>
-      <p class="small"><b>La carte :</b> chaque vraie cause trouvée allume une couche sur la carte du Rhône.</p>` },
+      <p class="small"><b>La carte :</b> chaque vraie cause trouvée allume une couche sur la carte du Rhône.</p>
+      <p><a href="notice.html" target="_blank" rel="noopener" style="color:var(--red);font-weight:700">Ouvrir la notice complète d'animation (à imprimer) →</a></p>` },
   { key:'roles', title:'Rôles des joueurs', art:icon('users', 34),
     body:() => `<p>Dix disciplines, dix indices. Avec moins de 10 joueurs, certains reçoivent plusieurs indices.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">${ROLES.map(r =>

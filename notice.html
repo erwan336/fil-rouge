@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notice Fil Rouge</title>
+<!-- Notice d'animation du jeu « Fil Rouge » : à lire à l'écran ou à imprimer (A4). -->
+<style>
+  :root{--paper:#fbf7ee;--ink:#2b2118;--soft:#6b5a45;--red:#c0392b;--teal:#0f766e;--line:#e3d8c2;
+    --serif:Georgia,"Times New Roman",serif;--hand:"Segoe Print","Bradley Hand","Comic Sans MS",cursive}
+  *{box-sizing:border-box}
+  body{margin:0;background:#e9e1d0;color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+  .page{max-width:860px;margin:24px auto;background:var(--paper);padding:44px 52px;box-shadow:0 10px 30px rgba(0,0,0,.15)}
+  @media (max-width:700px){.page{margin:0;padding:24px 18px}}
+  h1{font-family:var(--serif);font-size:2.6rem;line-height:1;margin:0}
+  h2{font-family:var(--serif);font-size:1.45rem;margin:30px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--red);display:flex;gap:10px;align-items:baseline}
+  h2 .n{font-size:.95rem;color:#fff;background:var(--red);border-radius:50%;width:28px;height:28px;display:inline-grid;place-items:center;flex-shrink:0}
+  h3{font-size:1.05rem;margin:18px 0 6px}
+  p{margin:0 0 10px} ul,ol{margin:0 0 12px;padding-left:22px} li{margin-bottom:4px}
+  .head{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:18px}
+  .sub{font-family:var(--hand);color:var(--red);font-size:1.15rem;margin-top:8px}
+  .meta{text-align:right;font-size:.85rem;color:var(--soft)}
+  .meta b{color:var(--ink)}
+  .box{border:1px solid var(--line);border-left:5px solid var(--teal);background:#fff;border-radius:6px;padding:12px 16px;margin:12px 0}
+  .box.red{border-left-color:var(--red)}
+  .box b.t{display:block;font-family:var(--serif);font-size:1.05rem;margin-bottom:4px}
+  .rules{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+  .rules div{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px;text-align:center;font-weight:600}
+  .rules span{display:block;font-family:var(--serif);font-size:1.6rem;color:var(--red);line-height:1;margin-bottom:6px}
+  @media (max-width:700px){.rules{grid-template-columns:1fr}}
+  table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:.92rem;background:#fff}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:#f1e8d6;font-weight:700}
+  td.c,th.c{text-align:center}
+  .tag{display:inline-block;font:700 .72rem Consolas,monospace;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:4px;color:#fff;background:var(--teal)}
+  .tag.r{background:var(--red)} .tag.g{background:#8a7658}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:700px){.two{grid-template-columns:1fr}}
+  .steps{counter-reset:s;list-style:none;padding:0}
+  .steps li{counter-increment:s;position:relative;padding-left:38px;margin-bottom:9px}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:700;font-size:.85rem}
+  .faq dt{font-weight:700;margin-top:10px} .faq dd{margin:2px 0 0 0;color:#3d3226}
+  .foot{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);font-size:.82rem;color:var(--soft)}
+  .url{font-family:Consolas,monospace;background:#fff;border:1px dashed var(--teal);padding:2px 8px;border-radius:4px;white-space:nowrap}
+  /* Impression A4 */
+  @page{size:A4;margin:14mm}
+  @media print{
+    body{background:#fff;font-size:10.5pt}
+    .page{box-shadow:none;margin:0;padding:0;max-width:none}
+    h2{break-after:avoid} .box,table,.rules,.two>div,.steps li{break-inside:avoid}
+    .pb{break-before:page}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="head">
+    <div>
+      <h1>Fil Rouge</h1>
+      <div class="sub">Une maladie. Six causes cachées. — Notice d'animation</div>
+    </div>
+    <div class="meta">Journée interdisciplinaire SHS<br><b>Centre Léon Bérard · Lyon</b><br>
+      Site du jeu : <span class="url">fil-rouge.erwangeo.com</span></div>
+  </div>
+
+  <!-- 1 -->
+  <h2><span class="n">1</span>Le jeu en bref</h2>
+  <p>Dans le nord du Rhône, une maladie touche beaucoup plus d'habitants qu'ailleurs. Les joueurs forment une équipe de recherche :
+    chacun incarne une ou plusieurs disciplines (géographie, sociologie, épidémiologie, santé publique, soins infirmiers, statistique,
+    data management, clinique, décision publique, représentation des patients) et reçoit des <b>indices secrets</b> sur son téléphone.</p>
+  <p>Sur le grand écran, un <b>mur d'enquête</b> affiche des pistes : certaines sont de <b>vraies causes</b>, les autres de
+    <b>fausses pistes</b> (rumeurs, idées reçues). Personne ne peut trouver seul : il faut <b>parler</b> et croiser les regards.</p>
+  <div class="rules">
+    <div><span>1</span>Trouvez les 6 vraies causes sur le mur.</div>
+    <div><span>2</span>Chacun a des indices secrets. Ne les montrez pas : parlez !</div>
+    <div><span>3</span>Chaque erreur coûte une vie. Plus de vies : l'enquête s'arrête.</div>
+  </div>
+  <div class="box"><b class="t">Le message du jeu</b>
+    La santé dépend de nombreux facteurs : territoire, conditions sociales, environnement, accès aux soins, comportements,
+    politiques publiques. Chaque cause trouvée allume une couche sur la carte SIG du Rhône ; à la fin, toutes les couches se
+    superposent au nord du département. <b>Aucune discipline n'avait la carte complète seule.</b></div>
+
+  <!-- 2 -->
+  <h2><span class="n">2</span>Matériel et préparation</h2>
+  <div class="two">
+    <div>
+      <h3>Il vous faut</h3>
+      <ul>
+        <li>Un <b>ordinateur</b> relié à un <b>vidéoprojecteur</b> ou un grand écran (un par équipe en mode Équipe).</li>
+        <li>Un <b>téléphone par joueur</b>, avec Internet (Wi-Fi ou 4G).</li>
+        <li>Facultatif : le son de l'ordinateur pour les effets sonores.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Avant les participants</h3>
+      <ul>
+        <li>Ouvrez <span class="url">fil-rouge.erwangeo.com</span> sur l'ordinateur.</li>
+        <li>Faites une partie test en <b>Solo</b> pour voir le mur.</li>
+        <li>Testez avec 2 téléphones que « Rejoindre » fonctionne.</li>
+        <li>Écrivez l'adresse du site au tableau.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <h2><span class="n">3</span>Lancer une partie (animateur)</h2>
+  <ol class="steps">
+    <li>Dans <b>« Paramétrer la partie »</b>, choisissez le <b>mode</b> : Solo, Équipe (2 à 3 joueurs) ou Grand groupe (4 à 10).</li>
+    <li>Choisissez la <b>maladie</b> (ou <b>🎲 Au hasard</b>), le <b>nombre de joueurs</b> et la <b>difficulté</b>.
+      En Grand groupe, réglez aussi la <b>durée</b> (3, 4 ou 5 minutes).</li>
+    <li>Cliquez sur <b>« Lancer l'enquête »</b>. Un <b>code à 5 chiffres</b> s'affiche avec le numéro de chaque joueur.</li>
+    <li>Quand tout le monde a lu ses indices, cliquez sur <b>« Tout le monde a lu : enquêtons ! »</b>. Un compte à rebours
+      « 3, 2, 1, Enquêtez ! » lance le chronomètre.</li>
+  </ol>
+
+  <!-- 4 -->
+  <h2><span class="n">4</span>Rejoindre avec son téléphone (joueurs)</h2>
+  <ol class="steps">
+    <li>Ouvrir <span class="url">fil-rouge.erwangeo.com</span> sur son téléphone.</li>
+    <li>Toucher <b>« J'ai un code : rejoindre »</b>, taper le code affiché sur le grand écran.</li>
+    <li>Choisir <b>son numéro de joueur</b> (affiché à côté de ses disciplines sur le grand écran).</li>
+    <li>Pour lire une carte : <b>garder le doigt appuyé dessus</b>. Elle se cache dès qu'on lâche : impossible de lire par-dessus l'épaule.</li>
+  </ol>
+  <h3>Les trois sortes d'indices</h3>
+  <table>
+    <tr><th>Sur la carte</th><th>Ce que c'est</th><th>Fiable ?</th></tr>
+    <tr><td><span class="tag">Votre regard</span></td><td>L'analyse de votre propre discipline. Elle confirme une vraie cause ou démonte une fausse piste.</td><td>Oui</td></tr>
+    <tr><td><span class="tag g">Témoignage · Chiffre · Observation · Document</span></td><td>Une information recueillie sur le terrain, qui renforce une vraie cause.</td><td>Oui</td></tr>
+    <tr><td><span class="tag r">Réseaux sociaux · Un voisin · Journal local…</span></td><td>Une <b>rumeur</b> qui pousse vers une fausse piste. Elle n'est pas signalée comme fausse : c'est aux joueurs de juger la source.</td><td>Non</td></tr>
+  </table>
+  <p>Selon la difficulté, une partie compte <b>16 indices</b> (Facile), <b>19</b> (Normal) ou <b>21</b> (Expert), répartis entre les joueurs.</p>
+
+  <!-- 5 -->
+  <h2 class="pb"><span class="n">5</span>Jouer sur le mur d'enquête</h2>
+  <ul>
+    <li>Les joueurs <b>racontent</b> leurs indices à voix haute et se mettent d'accord sur une piste.</li>
+    <li><b>Une seule personne touche l'écran</b> (l'animateur ou un « greffier ») : <b>1 toucher pour choisir, 1 deuxième pour valider</b>.</li>
+    <li><b>Vraie cause :</b> la carte se retourne en couleur, un fil rouge la relie à la carte SIG et une <b>couche s'allume</b>
+      (temps d'accès aux soins, revenus modestes, cadre de vie, lieux de dépistage, silence, actions de prévention).</li>
+    <li><b>Fausse piste :</b> tampon « FAUSSE PISTE », une vie en moins, et l'écran explique pourquoi c'était faux.</li>
+    <li>Le <b>journal d'enquête</b>, à droite du mur, garde la trace de chaque décision.</li>
+    <li>En haut de l'écran : le code, les <b>6 cases</b> des causes trouvées, les <b>vies</b>, le <b>chronomètre</b> (mettable en pause) et le bouton <b>son</b>.</li>
+  </ul>
+  <p>Chaque partie est <b>différente</b> : les vraies causes, les fausses pistes, les rumeurs et l'ordre des niveaux sont tirés au sort.</p>
+
+  <!-- 6 -->
+  <h2><span class="n">6</span>Les trois modes de jeu</h2>
+  <table>
+    <tr><th></th><th>Solo</th><th>Équipe</th><th>Grand groupe</th></tr>
+    <tr><th>Joueurs</th><td>1</td><td>2 à 3</td><td>4 à 10</td></tr>
+    <tr><th>Écrans</th><td>1 écran, pas de téléphone</td><td>1 écran par équipe + téléphones</td><td>1 grand écran + téléphones</td></tr>
+    <tr><th>Déroulé</th><td>3 niveaux</td><td>3 niveaux</td><td>1 seule manche, 12 pistes</td></tr>
+    <tr><th>Indices</th><td>Cartes face cachée à côté du mur ; les retourner coûte du temps</td><td>Sur les téléphones</td><td>Sur les téléphones</td></tr>
+    <tr><th>Durée</th><td colspan="2">environ 6 à 8 minutes</td><td>3 à 5 minutes de jeu (au choix) + lecture</td></tr>
+    <tr><th>Idéal pour</th><td>Découvrir le jeu, tester</td><td>Compétition entre équipes</td><td>Brise-glace, grande discussion</td></tr>
+  </table>
+
+  <h3>Les 3 niveaux (Solo et Équipe)</h3>
+  <p>À chaque niveau, il faut trouver <b>2 nouvelles vraies causes</b>, avec de plus en plus de fausses pistes. La carte SIG se complète d'un niveau à l'autre.
+    Les fausses pistes sans démenti n'apparaissent qu'au niveau 3.</p>
+  <table>
+    <tr><th>Niveau</th><th class="c">Pistes sur le mur</th><th class="c">Facile</th><th class="c">Normal</th><th class="c">Expert</th></tr>
+    <tr><td>★ Repérage</td><td class="c">4 (2 vraies + 2 fausses)</td><td class="c">♥♥♥♥ · 3 min 15</td><td class="c">♥♥♥ · 2 min 30</td><td class="c">♥♥ · 1 min 55</td></tr>
+    <tr><td>★★ Enquête</td><td class="c">6 (2 vraies + 4 fausses)</td><td class="c">♥♥♥ · 2 min 35</td><td class="c">♥♥ · 2 min</td><td class="c">♥ · 1 min 30</td></tr>
+    <tr><td>★★★ Expertise</td><td class="c">8 (2 vraies + 6 fausses)</td><td class="c">♥♥ · 1 min 55</td><td class="c">♥ · 1 min 30</td><td class="c">♥ · 1 min 10</td></tr>
+  </table>
+  <p>Si un niveau est perdu (plus de vies ou temps écoulé), on passe quand même au suivant : les causes manquées comptent simplement en moins.</p>
+
+  <h3>En Solo : le coût des indices</h3>
+  <table>
+    <tr><th>Retourner une carte coûte…</th><th class="c">Niveau 1</th><th class="c">Niveau 2</th><th class="c">Niveau 3</th></tr>
+    <tr><td>Facile</td><td class="c">gratuit</td><td class="c">gratuit</td><td class="c">gratuit</td></tr>
+    <tr><td>Normal</td><td class="c">gratuit</td><td class="c">−5 s</td><td class="c">−10 s</td></tr>
+    <tr><td>Expert</td><td class="c">−5 s</td><td class="c">−10 s</td><td class="c">−15 s</td></tr>
+  </table>
+
+  <h3>En Grand groupe : vies et temps</h3>
+  <table>
+    <tr><th>Durée choisie</th><th class="c">Facile (♥♥♥♥)</th><th class="c">Normal (♥♥♥)</th><th class="c">Expert (♥♥)</th></tr>
+    <tr><td>3 minutes</td><td class="c">3 min 55</td><td class="c">3 min</td><td class="c">2 min 15</td></tr>
+    <tr><td>4 minutes</td><td class="c">5 min 10</td><td class="c">4 min</td><td class="c">3 min</td></tr>
+    <tr><td>5 minutes</td><td class="c">6 min 30</td><td class="c">5 min</td><td class="c">3 min 45</td></tr>
+  </table>
+
+  <!-- 7 -->
+  <h2 class="pb"><span class="n">7</span>Difficulté et maladies</h2>
+  <table>
+    <tr><th></th><th>Facile</th><th>Normal</th><th>Expert</th></tr>
+    <tr><th>Vies</th><td>+1 par niveau</td><td>standard</td><td>−1 par niveau (minimum 1)</td></tr>
+    <tr><th>Temps</th><td>+30 %</td><td>standard</td><td>−25 %</td></tr>
+    <tr><th>Rumeurs</th><td>aucune</td><td>3</td><td>5</td></tr>
+    <tr><th>Conseillé pour</th><td>Première partie, public non spécialiste</td><td>La plupart des groupes</td><td>Rejouer, groupe déjà rodé</td></tr>
+  </table>
+  <p><b>Maladies disponibles :</b> cancer, diabète, maladies du cœur et des vaisseaux, BPCO (souffle), dépression, maladie des reins,
+    maladie du foie, <b>« Autre maladie »</b> (vous tapez son nom : les pistes deviennent générales) et <b>« 🎲 Au hasard »</b>.</p>
+
+  <!-- 8 -->
+  <h2><span class="n">8</span>Score et classement</h2>
+  <ul>
+    <li><b>Fils trouvés</b> sur 6 (une case colorée par cause trouvée).</li>
+    <li>À égalité : le plus de <b>vies gardées</b>, puis le plus de <b>secondes d'avance</b> (temps restant cumulé).</li>
+  </ul>
+  <table>
+    <tr><th>Rang affiché</th><th>Condition</th></tr>
+    <tr><td><b>Enquêteurs d'élite</b></td><td>6 causes sur 6, sans aucune erreur</td></tr>
+    <tr><td><b>Fins limiers</b></td><td>6 causes sur 6</td></tr>
+    <tr><td><b>Sur la bonne piste</b></td><td>4 ou 5 causes</td></tr>
+    <tr><td><b>Enquête à rouvrir</b></td><td>moins de 4 causes</td></tr>
+  </table>
+  <p>En mode Équipe, chaque équipe annonce son score à voix haute à la fin : l'animateur note les résultats au tableau.</p>
+
+  <!-- 9 -->
+  <h2><span class="n">9</span>Le débriefing (2 à 5 minutes)</h2>
+  <p>L'écran final montre les causes trouvées et manquées, <b>quelle discipline détenait quel indice</b>, la carte avec toutes les couches,
+    et <b>« Les rumeurs de cette partie »</b>. Questions pour lancer la discussion :</p>
+  <ol>
+    <li>Quelle piste auriez-vous choisie sans les autres ?</li>
+    <li>Quel indice vous a le plus surpris ?</li>
+    <li>Une rumeur vous a-t-elle fait douter ? À quoi avez-vous reconnu une source fiable ?</li>
+    <li>Quel regard disciplinaire vous était le moins familier ?</li>
+    <li>Dans vos propres projets, avec quelles disciplines auriez-vous intérêt à travailler ?</li>
+  </ol>
+
+  <!-- 10 -->
+  <h2><span class="n">10</span>Déroulé conseillé pour 8 à 9 participants</h2>
+  <table>
+    <tr><th>Durée</th><th>Étape</th></tr>
+    <tr><td>5 min</td><td>Présentation, adresse du site au tableau, chacun ouvre la page sur son téléphone.</td></tr>
+    <tr><td>8 min</td><td><b>Partie 1 · Grand groupe</b>, difficulté Normal, 4 minutes : tout le monde ensemble pour découvrir.</td></tr>
+    <tr><td>5 min</td><td>Débriefing collectif.</td></tr>
+    <tr><td>10 min</td><td><b>Partie 2 · Équipes</b> : 3 équipes de 2 ou 3, une autre maladie (ou Au hasard), chacune sur son écran, 3 niveaux.</td></tr>
+    <tr><td>5 min</td><td>Comparaison des scores au tableau, puis débriefing final.</td></tr>
+  </table>
+
+  <!-- 11 -->
+  <h2><span class="n">11</span>En cas de souci</h2>
+  <dl class="faq">
+    <dt>« Code invalide » sur un téléphone</dt>
+    <dd>Vérifier les 5 chiffres. Un code d'une ancienne partie ne fonctionne plus : relancer une partie sur le grand écran.</dd>
+    <dt>Un joueur n'a pas les mêmes indices que prévu</dt>
+    <dd>Il s'est trompé de numéro : toucher « Changer de partie ou de joueur » et choisir le bon numéro.</dd>
+    <dt>Le téléphone affiche une ancienne version</dt>
+    <dd>Recharger la page ; si besoin, fermer l'onglet et rouvrir l'adresse.</dd>
+    <dt>Pas de son</dt>
+    <dd>Le son démarre après un premier toucher ou clic (règle des navigateurs). Vérifier le bouton haut-parleur en haut à droite.</dd>
+    <dt>Pas de vibration sur iPhone</dt>
+    <dd>Normal : Apple ne les autorise pas dans les pages web. Tout le reste fonctionne.</dd>
+    <dt>Besoin d'une pause</dt>
+    <dd>Bouton pause à côté du chronomètre, en haut de l'écran.</dd>
+  </dl>
+
+  <div class="foot">
+    <b>Données :</b> contours du Rhône issus de l'IGN (ADMIN EXPRESS) et de geo.api.gouv.fr. Toutes les autres valeurs affichées
+    (nombre de malades, revenus, lieux de dépistage, chiffres des indices) sont <b>fictives</b> et servent uniquement au jeu.
+    Il est utile de le rappeler aux participants.
+  </div>
+</div>
+</body>
+</html>
