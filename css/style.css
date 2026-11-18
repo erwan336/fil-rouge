@@ -247,3 +247,16 @@ main{max-width:1320px;margin:0 auto;padding:22px 18px 40px}
 
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--paper);color:var(--ink);padding:12px 20px;border-radius:6px;
   z-index:60;box-shadow:0 10px 24px rgba(0,0,0,.5);font-weight:600;animation:fadein .25s}
+
+/* ================= GRANDS ÉCRANS (1500 px et plus) =================
+   La page occupe davantage la largeur au lieu de laisser deux grandes bandes de bois vides. */
+@media (min-width:1500px){
+  main{max-width:min(1760px,96vw)}
+  .desk{grid-template-columns:170px minmax(0,1fr) 400px;gap:30px}
+  .map-zone{grid-template-columns:minmax(0,1fr) 230px}
+  .mission{font-size:1.05rem}
+}
+@media (min-width:1900px){
+  main{max-width:min(2000px,94vw)}
+  html{font-size:17px}
+}
