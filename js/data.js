@@ -225,7 +225,7 @@ function buildScenario(P, seed) {
   // Rumeurs : en priorité sur les fausses pistes sans démenti (les plus piégeuses)
   const rumorTargets = [...drawn.slice(3), ...shuffle([myth, ...drawn.slice(0, 3)], rand)].slice(0, DIFFS[diff].rumors);
   rumorTargets.forEach(fk => clues.push({ role:holders[h++ % holders.length], kind:'rumor', source:pick(RUMOR_SOURCES), text:fk.rumor, target:fk.id }));
-  return { diff, causes, fakes, debunk, famOrder, clues: shuffle(clues, rand) };
+  return { seed, diff, causes, fakes, debunk, famOrder, clues: shuffle(clues, rand) };
 }
 
 /** Les 12 tuiles du mur : 6 vraies causes + 6 fausses pistes */

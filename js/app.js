@@ -260,6 +260,7 @@ function levelCard(L, i) {
    ===================================================================== */
 function startGame() {
   renderSettings();
+  if (state.enig) { clearInterval(state.enig.timer); state.enig = null; }
   // Maladie de la partie (tirée au sort si « Au hasard », jamais deux fois la même d'affilée)
   if (state.disIdx === RANDOM_DIS) {
     let d; do { d = Math.floor(Math.random() * DISEASES.length); } while (d === state.gameDis && DISEASES.length > 1);
@@ -293,7 +294,8 @@ function rulesHtml() {
   return `<ol class="rules3" style="color:inherit">
     <li>Trouvez les vraies causes sur le mur.</li>
     <li>Chacun a des indices secrets. Ne les montrez pas : parlez !</li>
-    <li>${multi() ? '3 niveaux : toujours plus de fausses pistes, toujours moins de vies.' : "3 erreurs et l'enquête est perdue."}</li></ol>`;
+    <li>${multi() ? '3 niveaux : toujours plus de fausses pistes, toujours moins de vies.' : "3 erreurs et l'enquête est perdue."}</li>
+    <li>À la fin, l'énigme finale : chacun détient une condition, il les faut toutes pour trouver.</li></ol>`;
 }
 
 /** Lien direct vers l'écran « Rejoindre » avec le code pré-rempli */
@@ -329,6 +331,7 @@ function renderLobby() {
         ${rulesHtml()}
         ${multi() ? `<div class="lvlist">${state.levels.map(levelCard).join('')}</div>`
                   : `<p class="hand" style="color:#ffd9a0;font-size:1.05rem">Lisez vos indices en silence… puis c'est parti pour ${fmtTime(lvl().time)} !</p>`}
+        <p class="small" style="color:#ffd9a0">${icon('target', 14)} Gardez la carte « Énigme finale » de votre téléphone pour la fin : elle servira à tout le groupe.</p>
         <button class="btn btn-go" id="goWall" style="margin-top:8px">Tout le monde a lu : enquêtons ! ${icon('arrow')}</button>
       </div>
     </div>`;
@@ -504,7 +507,10 @@ function endLevel(reason) {
     else el.classList.add('dim');
   });
   drawThreads();
-  if (state.lvl < state.levels.length - 1) showInterlude(reason); else finish(reason);
+  if (state.lvl < state.levels.length - 1) { showInterlude(reason); return; }
+  // Dernier niveau : l'énigme finale (js/enigma.js), puis le bilan
+  state.enigRes = null;
+  setTimeout(() => startEnigma(res => { state.enigRes = res; finish(reason); }), 1200);
 }
 
 /** Écran de transition entre deux niveaux */
@@ -561,6 +567,10 @@ function finish(reason) {
         · ${state.timeBank} s d'avance · difficulté ${DIFFS[state.scen.diff].name}
         ${solo() ? ` · ${state.revealed.size}/${state.scen.clues.length} indices lus` : ''}</p>
       ${state.mode === 'team' ? `<p class="small">Annoncez ce score aux autres équipes : le plus de fils gagne, puis le plus de vies gardées, puis le plus d'avance.</p>` : ''}
+      ${state.enigRes ? `<div class="en-sum ${state.enigRes.ok ? 'ok' : 'ko'}">${icon('target', 18)}
+        <span><b>Énigme finale : ${state.enigRes.ok ? 'résolue' : 'non résolue'}</b>
+        Le camion de dépistage part pour <b>${state.enigRes.name}</b>. ${state.enigRes.conds} conditions, toutes indispensables :
+        ${state.enigRes.ok ? "c'est en les mettant toutes ensemble que vous avez trouvé." : 'il manquait une voix dans la discussion.'}</span></div>` : ''}
       <div class="legend">${legend}</div>
       ${rumors.length ? `<div class="rumor-box"><b>${icon('news', 15)} Les rumeurs de cette partie</b>
         <p class="small">Ces indices ne venaient d'aucune discipline : ils poussaient vers de fausses pistes.</p>
@@ -686,6 +696,8 @@ function openPlayer(code, n, name = '') {
           <div class="d-hold">${icon('finger', 16)} Maintenez le doigt pour lire</div>
           <footer class="d-foot">${own ? 'Votre propre analyse : vous pouvez lui faire confiance.' : 'Information recueillie sur le terrain : fiable… ou pas ? Discutez-en.'}</footer>
         </article>`; }).join('')}
+      <div class="en-phone-sep">${icon('target', 16)} Pour la fin de la partie</div>
+      ${enigPhoneHtml(code, n, g.nb, g.seed)}
       <div class="glass" style="text-align:center">
         <b style="font-size:1.15rem">Ne montrez pas votre écran. Parlez !</b>
         <p class="small" style="margin:8px 0 0;color:#c8dcd8">Gardez le doigt sur une carte pour lire votre indice : il se cache dès que vous lâchez.</p>
