@@ -153,10 +153,51 @@ const FAKE_POOL = [
     clue:"Il y a autant de chats errants à Lyon : ça n'explique rien." }
 ];
 
+/* ---------------------------------------------------------------------
+   DIFFICULTÉ (choisie à l'accueil, cachée dans le code de partie :
+   graine % 3 = 0 Facile, 1 Normal, 2 Expert)
+   - lives : vies en plus ou en moins par niveau (jamais moins d'une)
+   - time  : multiplicateur du temps de chaque niveau
+   - cost  : secondes perdues pour retourner un indice en solo, par niveau
+   - rumors: nombre de rumeurs glissées parmi les indices
+   --------------------------------------------------------------------- */
+const DIFFS = [
+  { name:'Facile', lives: 1, time:1.3,  cost:[0, 0, 0],   rumors:0 },
+  { name:'Normal', lives: 0, time:1,    cost:[0, 5, 10],  rumors:3 },
+  { name:'Expert', lives:-1, time:.75,  cost:[5, 10, 15], rumors:5 }
+];
+
+/* Indices complémentaires : un par famille, venus d'une autre source que la discipline */
+const EXTRA = {
+  terr:['Témoignage',  "« Pour un simple rendez-vous, je dois poser une journée de congé. »"],
+  soc: ['Chiffre',     "Dans les communes les plus touchées, les revenus sont deux fois plus bas qu'à Lyon."],
+  env: ['Observation', "Dans les communes les plus touchées, le cadre de vie se dégrade depuis dix ans."],
+  soin:['Chiffre',     "Un habitant sur deux n'a vu aucun soignant depuis deux ans."],
+  comp:['Témoignage',  "« Ici, ces choses-là, on les garde pour soi. »"],
+  pol: ['Document',    "9 actions de prévention sur 10 ont lieu dans la métropole de Lyon."]
+};
+
+/* Rumeurs : elles poussent vers les fausses pistes. Rien ne les signale comme fausses :
+   c'est aux joueurs de juger la source. */
+const RUMORS = {
+  eau:   "« L'eau a un drôle de goût depuis quelque temps… »",
+  '5g':  "« Depuis qu'ils ont mis l'antenne, tout le monde tombe malade ! »",
+  eol:   "« Les éoliennes empêchent de dormir : forcément, ça rend malade. »",
+  faute: "« S'ils sont malades, c'est qu'ils ne font pas attention. »",
+  hasard:"« C'est le destin, on n'y peut rien. »",
+  lune:  "« À chaque pleine lune, les urgences sont pleines ! »",
+  climat:"« C'est le climat d'ici, ça use les gens. »",
+  ecrans:"« Les jeunes sont tout le temps sur leurs écrans, voilà le problème. »",
+  pollen:"« Avec tous ces pollens, comment ne pas tomber malade ? »",
+  chats: "« Les chats errants transmettent des maladies, c'est bien connu. »"
+};
+const RUMOR_SOURCES = ['Réseaux sociaux', 'Un voisin', 'Journal local', 'Bouche-à-oreille', 'Forum en ligne'];
+
 /** Tire le scénario d'une partie (même graine = même scénario sur tous les appareils) */
 function buildScenario(P, seed) {
   const rand = rng(seed * 104729 + 17);
   const pick = arr => arr[Math.floor(rand() * arr.length)];
+  const diff = seed % 3;
   // Vraies causes : la version propre à la maladie compte double, puis les variantes
   const causes = {};
   FAMILIES.forEach(f => {
@@ -164,15 +205,27 @@ function buildScenario(P, seed) {
     causes[f.id] = pick(opts);
   });
   // Fausses pistes : l'idée reçue de la maladie + 5 au hasard dans la réserve
-  const myth = { id:'myth', text:P.myth[0], why:P.myth[1], clue:P.myth[1] };
-  const drawn = shuffle(FAKE_POOL, rand).slice(0, 5);
+  const myth = { id:'myth', text:P.myth[0], why:P.myth[1], clue:P.myth[1], rumor:`« ${P.myth[0]}, tout le monde le sait. »` };
+  const drawn = shuffle(FAKE_POOL, rand).slice(0, 5).map(f => ({ ...f, rumor: RUMORS[f.id] }));
   // 3 fausses pistes ont un démenti (Data manager, Décideur, Patients) ; le Clinicien démonte l'idée reçue.
-  // Les 2 dernières n'ont aucun indice : il faut les écarter par déduction.
+  // Les 2 dernières n'ont aucun démenti : il faut les écarter par déduction.
   const debunk = { clin: myth, dm: drawn[0], dec: drawn[1], pat: drawn[2] };
   // Ordre pour les niveaux : d'abord les fausses pistes démenties (plus faciles), puis les autres
   const fakes = [...shuffle([myth, drawn[0], drawn[1], drawn[2]], rand), ...shuffle(drawn.slice(3), rand)];
   const famOrder = shuffle(FAMILIES.map(f => f.id), rand);
-  return { causes, fakes, debunk, famOrder };
+
+  /* Tous les indices de la partie */
+  const clues = [];
+  FAMILIES.forEach(f => clues.push({ role:f.role, kind:'fact', source:roleById(f.role).name, text:causes[f.id][1], target:f.id }));
+  Object.entries(debunk).forEach(([role, fk]) => clues.push({ role, kind:'debunk', source:roleById(role).name, text:fk.clue, target:fk.id }));
+  // Complémentaires et rumeurs : confiés au hasard aux disciplines
+  const holders = shuffle(ROLES.map(r => r.id), rand);
+  let h = 0;
+  FAMILIES.forEach(f => clues.push({ role:holders[h++ % holders.length], kind:'extra', source:EXTRA[f.id][0], text:EXTRA[f.id][1], target:f.id }));
+  // Rumeurs : en priorité sur les fausses pistes sans démenti (les plus piégeuses)
+  const rumorTargets = [...drawn.slice(3), ...shuffle([myth, ...drawn.slice(0, 3)], rand)].slice(0, DIFFS[diff].rumors);
+  rumorTargets.forEach(fk => clues.push({ role:holders[h++ % holders.length], kind:'rumor', source:pick(RUMOR_SOURCES), text:fk.rumor, target:fk.id }));
+  return { diff, causes, fakes, debunk, famOrder, clues: shuffle(clues, rand) };
 }
 
 /** Les 12 tuiles du mur : 6 vraies causes + 6 fausses pistes */

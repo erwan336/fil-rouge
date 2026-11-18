@@ -130,3 +130,27 @@ body.hit #livesChip{animation:hitflash .6s}
   body.hit .wall-layout,body.hit #livesChip{animation:none}
   .timebar i{transition:none}
 }
+
+/* ---------- Panneaux à droite du mur + dossier d'indices (solo) ---------- */
+.side-panels{display:grid;gap:16px;align-content:start;position:sticky;top:86px}
+.side-panels .caselog{position:static}
+.deck #deck{list-style:none;margin:0;padding:0;display:grid;gap:7px;max-height:440px;overflow:auto;padding-right:2px}
+.ck{width:100%;text-align:left;border:1px solid rgba(255,255,255,.1);border-left:4px solid var(--c);border-radius:9px;padding:8px 10px;
+  background:repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 8px,transparent 8px 16px),rgba(255,255,255,.04);color:#cfe7e3;
+  display:grid;gap:4px;transition:background .2s,transform .15s}
+.ck:not(.open):hover{background:rgba(45,212,191,.1);transform:translateX(-2px)}
+.ck-top{display:flex;justify-content:space-between;gap:6px;font:700 .64rem Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;color:#8fb8b2}
+.ck-src{color:var(--c);filter:brightness(1.35)}
+.ck-hid{display:flex;align-items:center;gap:6px;font-size:.8rem;color:#9fb8b4;font-style:italic}
+.ck.open{background:var(--paper);color:var(--ink);cursor:default;border-color:transparent;border-left-color:var(--c)}
+.ck.open .ck-top{color:var(--ink-soft)}
+.ck.open .ck-src{filter:none}
+.ck-tx{font-family:var(--serif);font-size:.9rem;line-height:1.35}
+.ck.flipnow{animation:flipin .45s cubic-bezier(.3,1.4,.5,1)}
+.rumor-box{text-align:left;margin:14px 0;padding:12px 14px;border-radius:8px;background:rgba(192,57,43,.08);border:1px dashed rgba(192,57,43,.45)}
+.rumor-box p{margin:4px 0 8px;color:var(--ink-soft)}
+.rumor-box ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.rumor-box li{font-size:.9rem}
+.rumor-box li span{display:inline-block;margin-right:8px;font:700 .66rem Consolas,monospace;text-transform:uppercase;letter-spacing:.06em;
+  color:#fff;background:#c0392b;padding:2px 6px;border-radius:4px}
+@media (max-width:1100px){.side-panels{position:static;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}}

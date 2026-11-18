@@ -37,7 +37,7 @@ const DURATIONS = [3, 4, 5];     // minutes d'enquête
 const GOAL = 6;                  // 6 vraies causes au total
 const state = {
   mode: 'team', nb: 3, teamName: '',             // mode : 'solo', 'team' (2-3) ou 'group' (4-10)
-  durIdx: 1, disIdx: 0, customName: '',          // autres réglages de l'accueil
+  durIdx: 1, disIdx: 0, customName: '', diff: 1,  // autres réglages de l'accueil (diff : 0 Facile, 1 Normal, 2 Expert)
   code: '', players: [], allTiles: [], tiles: [],
   levels: [], lvl: 0, levelFound: 0, foundIds: new Set(), errors: 0, livesKept: 0, timeBank: 0,
   lives: 3, picked: null, over: false,
@@ -145,7 +145,7 @@ const FOLDERS = [
 
 /* Nombre de joueurs autorisé selon le mode */
 const MODES = {
-  solo:  { min:1, max:1,  def:1, tip:"Vous jouez seul·e : les 10 indices s'affichent sous le mur." },
+  solo:  { min:1, max:1,  def:1, tip:"3 niveaux de plus en plus durs. Vos indices sont des cartes face cachée à côté du mur : à partir du niveau 2, chaque carte retournée coûte du temps." },
   team:  { min:2, max:3,  def:3, tip:"3 niveaux de plus en plus durs (★ ★★ ★★★), environ 5 minutes. 8 ou 9 participants ? Formez 3 équipes de 2 ou 3, chacune sur son écran, puis comparez les scores." },
   group: { min:4, max:10, def:8, tip:"Tout le groupe joue ensemble autour d'un seul grand écran." }
 };
@@ -196,7 +196,8 @@ function renderHome() {
 function renderSettings() {
   document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === state.mode));
   $('playersRow').classList.toggle('hidden', state.mode === 'solo');
-  $('durRow').classList.toggle('hidden', state.mode === 'team');   // en équipe, chaque niveau a son temps
+  $('durRow').classList.toggle('hidden', state.mode !== 'group');  // solo et équipe : chaque niveau a son temps
+  $('fVal').textContent = DIFFS[state.diff].name;
   $('teamName').classList.toggle('hidden', state.mode !== 'team');
   $('modeTip').textContent = MODES[state.mode].tip;
   state.teamName = state.mode === 'team' ? $('teamName').value.trim() : '';
@@ -225,19 +226,23 @@ const RANDOM_DIS = DISEASES.length + 1;
    fausses pistes sans démenti n'arrivent qu'au niveau 3.
    --------------------------------------------------------------------- */
 const TEAM_LEVELS = [
-  { name:'Repérage',  stars:1, nFams:2, nFakes:2, lives:3, time:120 },
-  { name:'Enquête',   stars:2, nFams:2, nFakes:4, lives:2, time:90  },
-  { name:'Expertise', stars:3, nFams:2, nFakes:6, lives:1, time:60  }
+  { name:'Repérage',  stars:1, nFams:2, nFakes:2, lives:3, time:150 },
+  { name:'Enquête',   stars:2, nFams:2, nFakes:4, lives:2, time:120 },
+  { name:'Expertise', stars:3, nFams:2, nFakes:6, lives:1, time:90  }
 ];
+/** Niveaux de la partie, ajustés à la difficulté (S.diff) */
 function levelsFor(S) {
-  const fakeIds = S.fakes.map(f => f.id);
-  if (state.mode === 'team') {
+  const fakeIds = S.fakes.map(f => f.id), D = DIFFS[S.diff];
+  const tune = L => ({ ...L, lives: Math.max(1, L.lives + D.lives), time: Math.round(L.time * D.time / 5) * 5 });
+  if (state.mode === 'team' || state.mode === 'solo') {
     let done = 0;
     return TEAM_LEVELS.map(L => { const fams = S.famOrder.slice(done, done += L.nFams);
-      return { ...L, fams, fakes: fakeIds.slice(0, L.nFakes) }; });
+      return tune({ ...L, fams, fakes: fakeIds.slice(0, L.nFakes) }); });
   }
-  return [{ name:'Enquête', stars:0, fams:FAMILIES.map(f => f.id), fakes:fakeIds, lives:3, time:DURATIONS[state.durIdx] * 60 }];
+  return [tune({ name:'Enquête', stars:0, fams:FAMILIES.map(f => f.id), fakes:fakeIds, lives:3, time:DURATIONS[state.durIdx] * 60 })];
 }
+/** Secondes perdues pour retourner un indice en solo, au niveau courant */
+const revealCost = () => solo() && multi() ? DIFFS[state.scen.diff].cost[state.lvl] : 0;
 const multi = () => state.levels.length > 1;
 const lvl = () => state.levels[state.lvl];
 const fmtTime = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -260,7 +265,9 @@ function startGame() {
     state.gameDis = d;
   } else state.gameDis = state.disIdx;
   setDisease(diseaseFor(state.gameDis, state.customName));
-  const seed = 100 + Math.floor(Math.random() * 900);
+  // La graine porte aussi la difficulté : graine % 3 = difficulté (lue par les téléphones)
+  let seed; do { seed = 100 + Math.floor(Math.random() * 900); } while (seed % 3 !== state.diff);
+  state.revealed = new Set();                         // indices retournés (solo)
   state.code = makeCode(state.nb, state.gameDis, seed);
   state.players = deal(state.nb, seed);
   state.scen = buildScenario(DISEASE, seed);          // causes et fausses pistes de CETTE partie
@@ -376,20 +383,27 @@ function startWall() {
       ${state.tiles.map((t, i) => `<button class="tile" data-id="${t.id}"><span class="tn">Piste ${String(i + 1).padStart(2, '0')}</span>
         <span class="tx">${t.text}</span><span class="sub"></span></button>`).join('')}
     </div>
+    <aside class="side-panels">
+    ${solo() ? `<!-- Solo : les indices sont des cartes face cachée -->
+    <div class="deck glass">
+      <h3>${icon('cards', 15)} Dossier d'indices</h3>
+      <div class="cl-head"><span id="deckCount"></span><span id="deckCost"></span></div>
+      <ol id="deck">${deckHtml()}</ol>
+    </div>` : ''}
     <!-- Journal d'enquête -->
-    <aside class="caselog glass">
+    <div class="caselog glass">
       <h3>${icon('clipboard', 15)} Journal d'enquête</h3>
-      <div class="cl-head"><span>Dossier ${solo() ? 'solo' : state.code}</span><span>${esc(DISEASE.name)}</span></div>
+      <div class="cl-head"><span>Dossier ${solo() ? 'solo' : state.code}</span><span>${esc(DISEASE.name)} · ${DIFFS[state.scen.diff].name}</span></div>
       <ol id="caseLog">${logHtml()}</ol>
       <div class="cl-rule"><b>Règle</b>1 toucher = choisir · 2 touchers = valider</div>
+    </div>
     </aside>
     </div>
-    <p class="wall-help" id="wallHelp">Touchez une piste pour la choisir, touchez-la encore pour valider.</p>
-    ${solo() ? `<div class="glass" style="margin-top:24px"><h3>Vos indices</h3><div class="solo-clues">
-      ${ROLES.map(r => `<div style="--c:${COLORS[r.color]}"><b>${r.name}</b>${clueFor(DISEASE, r.id, state.scen)}</div>`).join('')}</div></div>` : ''}`;
+    <p class="wall-help" id="wallHelp">Touchez une piste pour la choisir, touchez-la encore pour valider.</p>`;
   // Les couches trouvées aux niveaux précédents restent allumées
   state.foundIds.forEach(id => setLayer($('core'), id, true));
   $('wall').addEventListener('click', e => { const b = e.target.closest('.tile'); if (b) clickTile(b.dataset.id); });
+  if (solo()) { $('deck').addEventListener('click', e => { const c = e.target.closest('[data-ci]'); if (c) revealClue(+c.dataset.ci); }); paintDeckHead(); }
   show('wall'); renderHud(); renderTimer();
   // Compte à rebours, puis le chronomètre démarre
   state.over = true;
@@ -399,6 +413,32 @@ function startWall() {
 }
 
 const tileEl = id => document.querySelector(`.tile[data-id="${id}"]`);
+
+/* ---------- Solo : dossier d'indices (cartes face cachée) ---------- */
+function deckHtml() {
+  return state.scen.clues.map((c, i) => {
+    const r = roleById(c.role), open = state.revealed.has(i);
+    return `<li><button class="ck ${open ? 'open' : ''}" data-ci="${i}" style="--c:${COLORS[r.color]}" ${open ? 'disabled' : ''}>
+      <span class="ck-top"><span class="ck-n">N° ${String(i + 1).padStart(2, '0')}</span><span class="ck-src">${c.source}</span></span>
+      ${open ? `<span class="ck-tx">« ${c.text.replace(/^« | »$/g, '')} »</span>` : `<span class="ck-hid">${icon('finger', 14)} Retourner la carte</span>`}
+    </button></li>`;
+  }).join('');
+}
+function paintDeckHead() {
+  const n = state.revealed.size, tot = state.scen.clues.length, cost = revealCost();
+  $('deckCount').textContent = `${n}/${tot} lus`;
+  $('deckCost').textContent = cost ? `−${cost} s par carte` : 'Cartes gratuites';
+}
+/** Retourne un indice (coûte du temps à partir du niveau 2 en solo) */
+function revealClue(i) {
+  if (state.revealed.has(i)) return;
+  const cost = state.over ? 0 : revealCost();
+  state.revealed.add(i);
+  if (cost) { state.timeLeft = Math.max(1, state.timeLeft - cost); renderTimer(); toast(`Indice consulté : −${cost} s`); }
+  sfx('click');
+  $('deck').innerHTML = deckHtml(); paintDeckHead();
+  const b = document.querySelector(`[data-ci="${i}"]`); if (b) b.classList.add('flipnow');
+}
 
 /** 1er toucher = sélection, 2e toucher = validation */
 function clickTile(id) {
@@ -508,6 +548,7 @@ function finish(reason) {
       <span><b>${fa.name}</b> : ${t.text}<br><span class="small">Indice du rôle « ${roleById(fa.role).name} »</span></span></div>`;
   }).join('');
   const maxLives = state.levels.reduce((s, L) => s + L.lives, 0);
+  const rumors = state.scen.clues.filter(c => c.kind === 'rumor');
   $('result').innerHTML = `
     <div class="paper pin result">
       <div class="kicker">${status}</div>
@@ -516,9 +557,13 @@ function finish(reason) {
       <div class="bigslots">${FAMILIES.map(fa => `<i title="${fa.name}" style="--f:${fa.color}" class="${state.foundIds.has(fa.id) ? 'on' : ''}"></i>`).join('')}</div>
       <p>${state.teamName ? `Équipe « ${esc(state.teamName)} » · ` : ''}<b>${f} fil${f > 1 ? 's' : ''} sur ${GOAL}</b>
         · ${state.livesKept} vie${state.livesKept > 1 ? 's' : ''} gardée${state.livesKept > 1 ? 's' : ''} sur ${maxLives}
-        · ${state.timeBank} s d'avance</p>
+        · ${state.timeBank} s d'avance · difficulté ${DIFFS[state.scen.diff].name}
+        ${solo() ? ` · ${state.revealed.size}/${state.scen.clues.length} indices lus` : ''}</p>
       ${state.mode === 'team' ? `<p class="small">Annoncez ce score aux autres équipes : le plus de fils gagne, puis le plus de vies gardées, puis le plus d'avance.</p>` : ''}
       <div class="legend">${legend}</div>
+      ${rumors.length ? `<div class="rumor-box"><b>${icon('news', 15)} Les rumeurs de cette partie</b>
+        <p class="small">Ces indices ne venaient d'aucune discipline : ils poussaient vers de fausses pistes.</p>
+        <ul>${rumors.map(c => `<li><span>${c.source}</span>${c.text}</li>`).join('')}</ul></div>` : ''}
       <p class="bigline">Chaque regard a allumé une couche. Personne n'avait la carte complète seul.</p>
       <ol class="qs">
         <li>Quelle piste auriez-vous choisie sans les autres ?</li>
@@ -620,22 +665,25 @@ function openPlayer(code, n, name = '') {
   const S = buildScenario(P, g.seed);          // même tirage que le grand écran
   const me = deal(g.nb, g.seed)[n - 1];
   store.set('fr-player', `${code}:${n}:${encodeURIComponent(name)}`);
-  const many = me.roles.length > 1;
+  // Tous les indices confiés aux disciplines de ce joueur : le sien, les complémentaires… et peut-être une rumeur
+  const mine = S.clues.filter(c => me.roles.includes(c.role))
+    .sort((a, b) => (a.kind === 'fact' || a.kind === 'debunk' ? 0 : 1) - (b.kind === 'fact' || b.kind === 'debunk' ? 0 : 1));
+  const many = mine.length > 1;
   $('s-player').innerHTML = `
     <div class="phone">
       <div class="phone-head">
         <span class="chip code">${icon('phone', 14)} Partie ${code} · Joueur ${n}</span>
-        <div class="secret">${many ? `Vos ${me.roles.length} indices secrets` : 'Votre indice secret'}</div>
-        <div class="small" style="color:#c8dcd8">Enquête sur ${esc(P.title)} · Rhône</div>
+        <div class="secret">${many ? `Vos ${mine.length} indices secrets` : 'Votre indice secret'}</div>
+        <div class="small" style="color:#c8dcd8">Enquête sur ${esc(P.title)} · Rhône · ${DIFFS[S.diff].name}</div>
       </div>
-      ${me.roles.map((id, i) => { const r = roleById(id); return `
+      ${mine.map((c, i) => { const r = roleById(c.role), own = c.kind === 'fact' || c.kind === 'debunk'; return `
         <article class="paper clue dossier" style="--c:${COLORS[r.color]}">
           <header class="d-head"><span>Dossier confidentiel</span><span>N° ${code}-${n}${many ? '.' + (i + 1) : ''}</span></header>
           <span class="d-stamp">Secret</span>
-          <div class="d-role"><i>${icon(r.icon, 26)}</i><div><small>Votre regard</small><b>${r.name}</b></div></div>
-          <p>« ${clueFor(P, id, S)} »</p>
+          <div class="d-role"><i>${icon(own ? r.icon : 'news', 26)}</i><div><small>${own ? 'Votre regard' : 'Source : ' + c.source}</small><b>${r.name}</b></div></div>
+          <p>« ${c.text.replace(/^« | »$/g, '')} »</p>
           <div class="d-hold">${icon('finger', 16)} Maintenez le doigt pour lire</div>
-          <footer class="d-foot">Cet indice confirme une vraie cause… ou démonte une fausse piste.</footer>
+          <footer class="d-foot">${own ? 'Votre propre analyse : vous pouvez lui faire confiance.' : 'Information recueillie sur le terrain : fiable… ou pas ? Discutez-en.'}</footer>
         </article>`; }).join('')}
       <div class="glass" style="text-align:center">
         <b style="font-size:1.15rem">Ne montrez pas votre écran. Parlez !</b>
@@ -677,6 +725,9 @@ function init() {
   $('pPlus').onclick = () => { state.nb = Math.min(MODES[state.mode].max, state.nb + 1); renderSettings(); };
   $('dMinus').onclick = () => { state.durIdx = Math.max(0, state.durIdx - 1); renderSettings(); };
   $('dPlus').onclick = () => { state.durIdx = Math.min(DURATIONS.length - 1, state.durIdx + 1); renderSettings(); };
+  $('fMinus').onclick = () => { state.diff = Math.max(0, state.diff - 1); renderSettings(); };
+  $('fPlus').onclick = () => { state.diff = Math.min(DIFFS.length - 1, state.diff + 1); renderSettings(); };
+  $('icDiff').innerHTML = icon('star', 18);
   const nDis = DISEASES.length + 2;               // les maladies + « Autre maladie » + « Au hasard »
   $('mMinus').onclick = () => { state.disIdx = (state.disIdx + nDis - 1) % nDis; renderSettings(); };
   $('mPlus').onclick = () => { state.disIdx = (state.disIdx + 1) % nDis; renderSettings(); };
