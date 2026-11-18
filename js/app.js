@@ -382,7 +382,7 @@ function startWall() {
         <div class="sigbar"><i></i><i></i><i></i>SIG · Rhône (69)<b>${esc(DISEASE.name)}</b></div>
         <div class="sigmap">${sigMap('g')}</div>
         <div class="sigleg">${FAMILIES.map(f => `<span data-l="${f.id}" style="--f:${f.color}">${f.name}</span>`).join('')}</div>
-        <div class="ask" id="coreAsk">Pourquoi le nord du Rhône est-il si touché ?</div>
+        <div class="ask" id="coreAsk">${askFor()}</div>
       </div>
       ${state.tiles.map((t, i) => `<button class="tile" data-id="${t.id}"><span class="tn">Piste ${String(i + 1).padStart(2, '0')}</span>
         <span class="tx">${t.text}</span><span class="sub"></span></button>`).join('')}
@@ -417,6 +417,32 @@ function startWall() {
 }
 
 const tileEl = id => document.querySelector(`.tile[data-id="${id}"]`);
+
+/* Question posée sous la carte : elle change à chaque partie et à chaque niveau */
+const ASKS = [
+  d => 'Pourquoi le nord du Rhône est-il si touché ?',
+  d => 'Beaujolais, Tarare, Villefranche : pourquoi tant de malades ici ?',
+  d => "À 40 km de Lyon, deux fois plus de malades. Qu'est-ce qui cloche ?",
+  d => 'Même département, même maladie : pourquoi un tel écart entre le nord et le sud ?',
+  d => 'Pourquoi la carte rougit-elle à mesure qu\'on s\'éloigne de Lyon ?',
+  d => `${d.label} : pourquoi le nord du Rhône paie-t-il le prix fort ?`,
+  d => 'Pourquoi le Centre Léon Bérard voit-il arriver ces patients si tard ?',
+  d => 'Six causes se cachent derrière cette tache rouge. Lesquelles ?',
+  d => "Qu'est-ce que la carte ne montre pas encore ?",
+  d => `${d.label} : qu'ont en commun les territoires les plus rouges ?`,
+  d => "Pourquoi, au nord, consulte-t-on si tard ?",
+  d => 'Où se cache le fil rouge entre ces territoires ?'
+];
+const ASK_ENDS = [
+  'Six couches, une seule carte : tout se superpose au nord du Rhône.',
+  "Aucune cause n'explique tout seule la tache rouge : c'est leur somme.",
+  "Distance, revenus, silence, prévention absente… tout converge au nord.",
+  'Superposez les regards, et le territoire se met à parler.'
+];
+function askFor() {
+  const s = state.scen ? state.scen.seed : 0;
+  return ASKS[(s * 7 + state.lvl * 5) % ASKS.length](DISEASE);
+}
 
 /* ---------- Solo : dossier d'indices (cartes face cachée) ---------- */
 function deckHtml() {
@@ -458,7 +484,7 @@ function clickTile(id) {
     el.classList.add('ok'); el.style.setProperty('--f', t.family.color);
     el.querySelector('.sub').textContent = t.family.name;
     setLayer($('core'), id, true);              // … et une couche s'allume sur la carte
-    $('coreAsk').textContent = `Couche « ${SIG_LABELS[id]} » : ${state.foundIds.size} sur ${GOAL}`;
+    $('coreAsk').textContent = `Couche « ${SIG_LABELS[id]} » allumée : ${state.foundIds.size} sur ${GOAL}`;
     drawThreads(id);
     toast(`Vraie cause : ${t.family.name}`, 'ok');
     sfx('ok'); burst(el, t.family.color);
@@ -543,7 +569,7 @@ function finish(reason) {
   // Carte : toutes les couches se superposent, le nord ressort
   FAMILIES.forEach(fa => setLayer($('core'), fa.id, true));
   setLayer($('core'), 'hot', true);
-  $('coreAsk').textContent = 'Six couches, une seule carte : tout se superpose au nord du Rhône.';
+  $('coreAsk').textContent = ASK_ENDS[state.scen.seed % ASK_ENDS.length];
 
   const f = state.foundIds.size, win = f === GOAL;
   const rank = win && state.errors === 0 ? "Enquêteurs d'élite" : win ? 'Fins limiers' : f >= 4 ? 'Sur la bonne piste' : 'Enquête à rouvrir';
