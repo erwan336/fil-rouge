@@ -1,0 +1,146 @@
+/* =====================================================================
+   TÉLÉPHONE, TABLETTE ET EFFETS DE JEU
+   Chargée en dernier. Trois tailles :
+   - téléphone   : jusqu'à 700 px
+   - tablette    : 701 à 1100 px
+   - ordinateur  : au-delà (inchangé)
+   ===================================================================== */
+
+/* ---------- Toucher ---------- */
+button,.tile,.av,.folder,.dossier{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+
+/* ---------- Effets de jeu (toutes tailles) ---------- */
+/* Compte à rebours */
+.cd{position:fixed;inset:0;z-index:80;display:grid;place-items:center;text-align:center;pointer-events:none;padding:20px;
+  background:radial-gradient(circle at 50% 45%,rgba(12,28,33,.78),rgba(5,3,2,.94));backdrop-filter:blur(3px)}
+.cd-lbl{font-family:var(--serif);font-weight:700;color:#ffd9a0;font-size:clamp(1.25rem,4.5vw,2rem)}
+.cd-sub{color:#9fb8b4;font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.18em;margin-top:6px}
+.cd-n{font-family:var(--serif);font-weight:700;line-height:1;margin-top:18px;color:#fff;
+  font-size:clamp(6rem,28vw,12rem);text-shadow:0 0 50px rgba(224,54,43,.85);animation:cdpop .7s ease both}
+.cd-n.go{font-size:clamp(2.6rem,12vw,5.5rem);color:#7ee7d6;text-shadow:0 0 50px rgba(45,212,191,.85)}
+@keyframes cdpop{0%{transform:scale(2.3);opacity:0}28%{transform:scale(1);opacity:1}82%{opacity:1}100%{transform:scale(.85);opacity:0}}
+/* Les cartes se retournent quand on valide */
+.tile.ok,.tile.ko{animation:flipin .55s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes flipin{0%{transform:perspective(700px) rotateY(95deg) scale(.95)}100%{transform:perspective(700px) rotateY(0) scale(1)}}
+/* Étincelles */
+.spark{position:fixed;z-index:75;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:2px;pointer-events:none;
+  animation:spark .75s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes spark{to{transform:translate(var(--dx),var(--dy)) rotate(280deg) scale(.4);opacity:0}}
+/* Bouton son */
+.iconbtn.sound{width:34px;height:34px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#cfe7e3}
+.iconbtn.sound.off{color:#8a7c6c}
+/* Indice à maintenir (téléphone du joueur) */
+.dossier{cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y}
+.dossier p{filter:blur(9px);transition:filter .2s}
+.dossier.peek p{filter:none}
+.dossier.peek{box-shadow:0 0 0 3px var(--c),0 16px 30px rgba(0,0,0,.5)}
+.d-hold{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 16px 12px;padding:9px;border-radius:9px;
+  background:rgba(0,0,0,.07);font-weight:700;font-size:.86rem;color:var(--ink-soft);transition:opacity .2s}
+.dossier.peek .d-hold{opacity:.35}
+.dossier:not(.peek) .d-hold svg{animation:press 1.6s ease-in-out infinite}
+@keyframes press{50%{transform:translateY(3px) scale(.9)}}
+/* Accès direct « J'ai un code » (affiché seulement sur téléphone et tablette) */
+.quickjoin{display:none;text-align:center}
+.quickjoin .btn{width:100%;font-size:1.05rem}
+.quickjoin p{margin:8px 0 0;color:#c8b99c;font-size:.85rem}
+
+/* =====================================================================
+   TÉLÉPHONE ET TABLETTE : accueil en « écran-titre »
+   ===================================================================== */
+@media (max-width:900px){
+  main{padding:14px 14px 32px}
+  .desk{display:flex;flex-direction:column;align-items:stretch;gap:16px}
+  .desk>*,.board-top,.side,.keyfigs,.map-zone,.folders,.quickjoin{min-width:0;max-width:100%}
+  .board{display:contents}                  /* ses blocs se rangent dans la colonne */
+  .strings,.chalk,.note-vo,.books,.mission{display:none!important}
+  .board-top{order:1;display:block}
+  .quickjoin{order:2;display:block}
+  .side{order:3;display:flex;flex-direction:column;gap:16px}
+  .side>.glass:nth-child(3){order:1}         /* paramètres d'abord */
+  .side>.glass:nth-child(2){order:2}         /* puis l'équipe */
+  .side>.badge-top{order:3}
+  .keyfigs{order:4}
+  .map-zone{order:5;display:block}
+  .folders{order:6}
+  .title-paper{text-align:center;transform:rotate(-1.2deg);padding:28px 20px 22px;margin:10px 6px 0}
+  .title-paper h1{font-size:clamp(3.2rem,16vw,4.6rem)}
+  .title-paper .underline{margin:12px auto 0}
+  /* Disciplines : bande que l'on fait défiler du doigt */
+  .avatars{display:flex;overflow-x:auto;gap:12px;padding:4px 2px 12px;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .avatars::-webkit-scrollbar{display:none}
+  .av{flex:0 0 74px;scroll-snap-align:start}
+  /* Dossiers : rangée défilante */
+  .folders{display:flex;overflow-x:auto;gap:12px;margin-top:4px;padding:16px 2px 10px;scrollbar-width:none}
+  .folders::-webkit-scrollbar{display:none}
+  .folder{flex:0 0 150px;min-height:112px}
+  .desk-foot{flex-direction:column;text-align:center;gap:6px;margin-top:24px}
+  .lobby{gap:16px}
+}
+
+/* =====================================================================
+   TÉLÉPHONE (≤ 700 px)
+   ===================================================================== */
+@media (max-width:700px){
+  /* En-tête compact sur une seule ligne */
+  .topbar{padding:8px 8px 11px;gap:5px;flex-wrap:nowrap}
+  .brand-txt,.cc-code,.chip.code svg,#timerIc{display:none}
+  .brand{margin-right:auto}
+  .brand .logo{width:30px;height:30px}
+  .topbar .chip{height:32px;padding:4px 8px;font-size:.8rem;gap:5px;white-space:nowrap}
+  .chip.code:not(:has(span+span)){display:none}  /* rien d'utile à afficher hors mode niveaux */
+  .slots{gap:3px} .slots i{width:9px;height:9px;border-radius:2px}
+  .chip.lives{font-size:.95rem;letter-spacing:1px}
+  .iconbtn{width:24px;height:24px}
+  .iconbtn.sound{width:32px;height:32px;flex-shrink:0}
+  /* Mur : la carte en haut, puis de grandes pistes sur 2 colonnes */
+  .lvbanner{padding:8px 12px;gap:2px 10px;margin-bottom:12px}
+  .lvbanner b{font-size:1.05rem}
+  .lvbanner span:last-child{font-size:.88rem}
+  .wall{grid-template-columns:repeat(2,1fr);gap:12px}
+  .core{grid-column:1/-1;grid-row:1}
+  .core.sig .sigmap svg{max-height:240px}
+  .sigleg{gap:4px}
+  .sigleg span{font-size:.6rem;padding:2px 7px}
+  .core.sig .ask{font-size:.92rem}
+  .tile{min-height:108px;padding:26px 10px 10px}
+  .tile:nth-child(odd),.tile:nth-child(even){transform:none}
+  .tile .tx{font-size:1.02rem}
+  .tile .sub{font-size:.72rem}
+  .tile.pick{transform:scale(1.03)!important}
+  .caselog{position:static}
+  #caseLog{max-height:230px}
+  .wall-help{font-size:.95rem;margin-top:14px}
+  /* Résultat */
+  .result{padding:20px 16px}
+  .result h2{font-size:1.45rem}
+  .legend{grid-template-columns:1fr}
+  .bigslots i{width:28px;height:28px}
+  /* Lobby */
+  .bigcode span{border-radius:10px}
+  .rules3 li{font-size:1rem}
+  /* Notifications au-dessus de la barre de geste des téléphones */
+  .toast{bottom:calc(16px + env(safe-area-inset-bottom));font-size:.88rem}
+}
+@media (max-width:480px){
+  .chip.goal .slots{display:none}
+  .chip.lives{letter-spacing:0;font-size:.85rem}
+  .topbar .chip{padding:4px 7px}
+}
+
+/* =====================================================================
+   TABLETTE (701 à 1100 px)
+   ===================================================================== */
+@media (min-width:701px) and (max-width:1100px){
+  .topbar{flex-wrap:nowrap;gap:8px}
+  .brand-txt small{display:none}
+  .topbar .chip{padding:4px 10px}
+  .caselog{position:static}
+  .wall{gap:14px}
+  .tile{min-height:124px}
+  .tile .tx{font-size:1.08rem}
+  .core.sig .sigmap svg{max-height:300px}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .cd-n,.tile.ok,.tile.ko,.spark,.dossier:not(.peek) .d-hold svg{animation:none}
+}

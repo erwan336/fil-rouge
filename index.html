@@ -37,6 +37,7 @@
 <link rel="stylesheet" href="css/sig.css">
 <link rel="stylesheet" href="css/home-fx.css">
 <link rel="stylesheet" href="css/polish.css">
+<link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
 
@@ -49,6 +50,7 @@
   <span class="chip lives" id="livesChip" aria-label="Vies restantes"></span>
   <span class="chip timer" id="timerChip"><span id="timerIc"></span><span id="timerTxt">04:00</span>
     <button class="iconbtn" id="timerBtn" aria-label="Pause ou reprise du chronomètre"></button></span>
+  <button class="iconbtn sound" id="muteBtn" aria-label="Couper ou activer le son"></button>
   <!-- Barre de temps restant -->
   <div class="timebar" aria-hidden="true"><i id="timeFill"></i></div>
 </header>
@@ -81,6 +83,12 @@
           <b>Rhône (69)</b>
           Un territoire,<br>des questions,<br>des solutions <span class="circle-q">?</span>
         </div>
+      </div>
+
+      <!-- Téléphone et tablette : accès direct pour les joueurs -->
+      <div class="quickjoin">
+        <button class="btn btn-go" id="qjBtn">J'ai un code : rejoindre</button>
+        <p>Vous animez la partie ? Paramétrez-la juste en dessous.</p>
       </div>
 
       <!-- Chiffres clés du jeu -->
@@ -176,6 +184,7 @@
 <script src="js/rhone-data.js"></script>
 <script src="js/map.js"></script>
 <script src="js/app.js"></script>
+<script src="js/sfx.js"></script>
 <script src="js/home-fx.js"></script>
 </body>
 </html>

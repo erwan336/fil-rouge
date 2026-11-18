@@ -52,6 +52,39 @@ function show(id) {
   $('topbar').classList.toggle('hidden', !['lobby', 'wall'].includes(id));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+/** Joue un son (js/sfx.js) sans jamais bloquer le jeu si le son est indisponible */
+function sfx(name) { try { SFX[name](); } catch (e) {} }
+const REDUCED = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Compte à rebours plein écran « 3, 2, 1, Enquêtez ! » puis done() */
+function countdown(label, sub, done) {
+  const o = document.createElement('div'); o.className = 'cd'; o.setAttribute('aria-live', 'assertive');
+  document.body.appendChild(o);
+  const steps = ['3', '2', '1', 'GO'];
+  let i = 0;
+  const step = () => {
+    if (i >= steps.length) { o.remove(); done(); return; }
+    const s = steps[i++], go = s === 'GO';
+    o.innerHTML = `<div><div class="cd-lbl">${label}</div><div class="cd-sub">${sub}</div>
+      <div class="cd-n ${go ? 'go' : ''}">${go ? 'Enquêtez !' : s}</div></div>`;
+    sfx(go ? 'go' : 'tick');
+    setTimeout(step, REDUCED() ? 250 : go ? 650 : 700);
+  };
+  step();
+}
+
+/** Gerbe d'étincelles autour d'un élément (vraie cause trouvée) */
+function burst(el, color) {
+  if (REDUCED()) return;
+  const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement('i'); s.className = 'spark';
+    const a = Math.random() * 6.283, d = 50 + Math.random() * 80;
+    s.style.cssText = `left:${cx}px;top:${cy}px;background:${i % 3 ? color : '#fff'};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d}px`;
+    document.body.appendChild(s); setTimeout(() => s.remove(), 800);
+  }
+}
+
 /** Notification. kind : 'ko' (erreur), 'ok' (réussite) ou rien (information) */
 function toast(msg, kind = '') {
   document.querySelectorAll('.toast').forEach(x => x.remove());
@@ -281,8 +314,10 @@ function renderLobby() {
    G. ÉTAPE 2 : ENQUÊTER (le mur)
    ===================================================================== */
 function renderHud() {
-  const base = solo() ? `${icon('target', 15)} Solo` : `${icon('phone', 15)} Code ${state.code}`;
-  $('codeChip').innerHTML = base + (multi() ? ` · Niveau ${state.lvl + 1}/${state.levels.length}` : '');
+  // Sur téléphone, seul le niveau reste visible (le code est masqué par css/mobile.css)
+  const base = solo() ? `${icon('target', 15)} <span class="cc-code">Solo${multi() ? ' ·' : ''}</span>`
+                      : `${icon('phone', 15)} <span class="cc-code">Code ${state.code}${multi() ? ' ·' : ''}</span>`;
+  $('codeChip').innerHTML = base + (multi() ? ` <span>Niv. ${state.lvl + 1}/${state.levels.length}</span>` : '');
   $('livesChip').innerHTML = '♥'.repeat(state.lives) + `<span class="lost">${'♥'.repeat(lvl().lives - state.lives)}</span>`;
   // Objectif : 6 cases qui prennent la couleur de chaque famille trouvée
   $('scoreChip').innerHTML = `<span class="slots">${FAMILIES.map(f =>
@@ -338,7 +373,12 @@ function startWall() {
   // Les couches trouvées aux niveaux précédents restent allumées
   state.foundIds.forEach(id => setLayer($('core'), id, true));
   $('wall').addEventListener('click', e => { const b = e.target.closest('.tile'); if (b) clickTile(b.dataset.id); });
-  show('wall'); renderHud(); startTimer();
+  show('wall'); renderHud(); renderTimer();
+  // Compte à rebours, puis le chronomètre démarre
+  state.over = true;
+  const label = multi() ? `Niveau ${state.lvl + 1} · ${L.name}` : `Enquête sur ${esc(DISEASE.title)}`;
+  const sub = `${multi() ? '★'.repeat(L.stars) + ' · ' : ''}${state.tiles.length} pistes · ${'♥'.repeat(L.lives)}`;
+  countdown(label, sub, () => { state.over = false; startTimer(); });
 }
 
 const tileEl = id => document.querySelector(`.tile[data-id="${id}"]`);
@@ -348,7 +388,7 @@ function clickTile(id) {
   const t = state.tiles.find(x => x.id === id);
   if (state.over || !t || t.done) return;
   document.querySelectorAll('.tile.pick').forEach(el => el.classList.remove('pick'));
-  if (state.picked !== id) { state.picked = id; tileEl(id).classList.add('pick'); return; }
+  if (state.picked !== id) { state.picked = id; tileEl(id).classList.add('pick'); sfx('click'); return; }
 
   state.picked = null; t.done = true;
   const el = tileEl(id); el.classList.add('done');
@@ -360,11 +400,13 @@ function clickTile(id) {
     $('coreAsk').textContent = `Couche « ${SIG_LABELS[id]} » : ${state.foundIds.size} sur ${GOAL}`;
     drawThreads(id);
     toast(`Vraie cause : ${t.family.name}`, 'ok');
+    sfx('ok'); burst(el, t.family.color);
   } else {                                      // fausse piste : une vie en moins
     state.lives--; state.errors++;
     el.classList.add('ko');
     el.querySelector('.sub').textContent = t.why;
     toast('Fausse piste ! ' + t.why, 'ko');
+    sfx('ko');
     document.body.classList.remove('hit'); void document.body.offsetWidth; document.body.classList.add('hit');
   }
   logEntry(t);
@@ -427,6 +469,7 @@ function showInterlude(reason) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setTimeout(drawThreads, 500);
   if (reason === 'win') confetti();
+  sfx(reason === 'win' ? 'level' : 'lose');
 }
 
 /* =====================================================================
@@ -474,6 +517,7 @@ function finish(reason) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setTimeout(drawThreads, 500);            // le panneau décale le mur : on retrace les fils
   if (win) confetti();
+  sfx(win ? 'win' : 'lose');
 }
 
 function confetti() {
@@ -498,6 +542,7 @@ function startTimer() {
   state.timerId = setInterval(() => {
     if (state.timeLeft > 0) state.timeLeft--;
     renderTimer();
+    if (state.timeLeft > 0 && state.timeLeft <= 5) sfx('tick');     // les 5 dernières secondes
     if (state.timeLeft === hurryAt()) toast(hurryAt() === 60 ? 'Plus qu\'une minute !' : 'Plus que 20 secondes !');
     if (state.timeLeft === 0) endLevel('time');
   }, 1000);
@@ -571,15 +616,26 @@ function openPlayer(code, n, name = '') {
           <span class="d-stamp">Secret</span>
           <div class="d-role"><i>${icon(r.icon, 26)}</i><div><small>Votre regard</small><b>${r.name}</b></div></div>
           <p>« ${clueFor(P, id)} »</p>
+          <div class="d-hold">${icon('finger', 16)} Maintenez le doigt pour lire</div>
           <footer class="d-foot">Cet indice confirme une vraie cause… ou démonte une fausse piste.</footer>
         </article>`; }).join('')}
       <div class="glass" style="text-align:center">
         <b style="font-size:1.15rem">Ne montrez pas votre écran. Parlez !</b>
-        <p class="small" style="margin:8px 0 0;color:#c8dcd8">Sur le grand écran : 12 pistes, 6 vraies causes.<br>Votre indice confirme une vraie cause… ou démonte une fausse piste.</p>
+        <p class="small" style="margin:8px 0 0;color:#c8dcd8">Gardez le doigt sur une carte pour lire votre indice : il se cache dès que vous lâchez.</p>
       </div>
       <button class="btn btn-line" id="leave" style="width:100%;margin-top:18px">Changer de partie ou de joueur</button>
     </div>`;
   $('leave').onclick = () => { store.del('fr-player'); renderJoin(code, name); };
+  // Indice flouté : on le lit en gardant le doigt (ou la souris) appuyé dessus
+  document.querySelectorAll('#s-player .dossier').forEach(d => {
+    d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', 'Maintenir pour lire l\'indice');
+    const on = () => { d.classList.add('peek'); sfx('peek'); };
+    const off = () => d.classList.remove('peek');
+    d.addEventListener('pointerdown', on);
+    ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(t => d.addEventListener(t, off));
+    d.addEventListener('contextmenu', e => e.preventDefault());
+    d.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); d.classList.toggle('peek'); } });
+  });
   show('player');
 }
 
@@ -609,6 +665,8 @@ function init() {
   $('customName').oninput = renderSettings;
   $('startBtn').onclick = startGame;
   $('joinBtn').onclick = () => renderJoin();
+  $('qjBtn').innerHTML = `${icon('phone', 20)} J'ai un code : rejoindre`;
+  $('qjBtn').onclick = () => renderJoin();
   $('timerBtn').onclick = () => { if (!state.over && !$('s-wall').classList.contains('hidden')) state.running ? stopTimer() : startTimer(); };
   $('folders').addEventListener('click', e => {
     const b = e.target.closest('[data-folder]'); if (!b) return;
