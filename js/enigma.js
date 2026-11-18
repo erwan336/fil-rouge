@@ -152,9 +152,10 @@ const enigFor = (E, nb, n) => E.clues.filter((_, k) => k % nb === n - 1);
 const ENIG_TIME = [180, 150, 120];        // secondes selon la difficulté
 const ENIG_TRIES = [3, 2, 1];             // essais selon la difficulté
 
-function enigCard(x, st) {
+function enigCard(x, st, filt) {
   const yn = (v, a, b) => `<span class="ec ${v ? 'y' : 'n'}">${v ? a : b}</span>`;
-  return `<button class="efiche ${st.out.has(x.i) ? 'out' : ''} ${st.wrong.has(x.i) ? 'wrong' : ''}" data-ei="${x.i}" aria-pressed="${st.out.has(x.i)}">
+  return `<button class="efiche ${st.out.has(x.i) ? 'out' : ''} ${filt ? 'filt' : ''} ${st.wrong.has(x.i) ? 'wrong' : ''}" data-ei="${x.i}" aria-pressed="${st.out.has(x.i)}">
+    ${filt && !st.out.has(x.i) ? `<span class="ef-why">Écarté : ${qText(filt)}</span>` : ''}
     <span class="ef-top"><b class="ef-n">${x.i + 1}</b><span class="ef-name">${x.name}</span></span>
     <span class="ef-meta">${x.ca ? 'CA' : 'CC'} · ${ZONE_TAG[x.zone]} · ${x.met ? 'touche la Métropole' : 'ne touche pas la Métropole'}</span>
     <span class="ef-chips">
@@ -185,12 +186,28 @@ function enigMap(E) {
   return box.innerHTML;
 }
 
+/* Requêtes SIG : les champs de la table attributaire (valeur = indice dans vals) */
+const QFIELDS = [
+  { a:'mal',  label:'Malades',              vals:['faible', 'moyen', 'fort'] },
+  { a:'dep',  label:'Dépistage',            vals:['non', 'oui'] },
+  { a:'gare', label:'Gare',                 vals:['non', 'oui'] },
+  { a:'med',  label:'Médecins',             vals:['rares', 'nombreux'] },
+  { a:'pop',  label:'Population',           vals:['jeune', 'âgée'] },
+  { a:'asso', label:'Association',          vals:['non', 'oui'] },
+  { a:'met',  label:'Touche la Métropole',  vals:['non', 'oui'] },
+  { a:'ca',   label:'Type',                 vals:['CC', 'CA'] },
+  { a:'zone', label:'Zone',                 vals:ZONE_TAG },
+  { a:'not',  label:'Numéro',               vals:ENIG_TERR.map((_, i) => String(i + 1)) }
+];
+const qField = a => QFIELDS.find(f => f.a === a);
+const qText = q => `${qField(q.a).label} ${q.a === 'not' || !q.eq ? '≠' : '='} ${qField(q.a).vals[q.v]}`;
+
 /** Lance l'énigme finale ; then(résultat) est appelé à la fin */
 function startEnigma(then) {
   const E = buildEnigma(state.scen.seed, state.nb);
   if (!E) { then(null); return; }
   const d = state.scen.diff;
-  const st = { E, out: new Set(), wrong: new Set(), tries: ENIG_TRIES[d], left: ENIG_TIME[d], done: false, timer: null };
+  const st = { E, filters: [], out: new Set(), wrong: new Set(), tries: ENIG_TRIES[d], left: ENIG_TIME[d], done: false, timer: null };
   state.enig = st;
   $('result').innerHTML = `
     <div class="enigma glass" id="enigma">
@@ -207,20 +224,49 @@ function startEnigma(then) {
       ${solo() ? `<ol class="en-conds">${E.clues.map(c => `<li style="--c:${COLORS[roleById(c.role).color]}"><small>${roleById(c.role).name}</small>${c.text}</li>`).join('')}</ol>` : ''}
       <div class="en-body">
         <div class="sigmap en-map" id="enMap">${enigMap(E)}</div>
-        <div class="en-grid" id="enGrid"></div>
+        <div class="en-right">
+          <div class="en-query" aria-label="Requête SIG">
+            <div class="q-title">${icon('database', 15)} Requête SIG <small>table attributaire des 12 territoires</small></div>
+            <div class="q-row">
+              <span class="q-kw">SÉLECTIONNER OÙ</span>
+              <select id="qA" aria-label="Champ">${QFIELDS.map(f => `<option value="${f.a}">${f.label}</option>`).join('')}</select>
+              <select id="qOp" aria-label="Opérateur"><option value="1">=</option><option value="0">≠</option></select>
+              <select id="qV" aria-label="Valeur"></select>
+              <button class="btn btn-go q-add" id="qAdd">Appliquer</button>
+            </div>
+            <ol class="q-hist" id="qHist"></ol>
+            <div class="q-count"><span id="qCount"></span><i><b id="qBar"></b></i></div>
+          </div>
+          <div class="en-grid" id="enGrid"></div>
+        </div>
       </div>
       <div class="en-foot">
-        <span class="en-help">Touchez une fiche (ou un numéro sur la carte) pour la rayer. Il doit n'en rester qu'une.</span>
+        <span class="en-help">Traduisez chaque condition en requête : la carte se filtre à chaque étape. Vous pouvez aussi rayer une fiche à la main.</span>
         <button class="btn btn-red" id="enGo" disabled></button>
       </div>
     </div>`;
+  const failing = x => st.filters.find(q => !enigPass(q, x));          // 1re requête qui écarte x
+  const remaining = () => E.terr.filter(x => !st.out.has(x.i) && !failing(x));
+  const paintQuery = () => {
+    let n = E.terr.length;
+    $('qHist').innerHTML = st.filters.map((q, k) => {
+      const after = E.terr.filter(x => st.filters.slice(0, k + 1).every(f => enigPass(f, x))).length;
+      const html = `<li><span class="q-step">${k + 1}</span><code>${qText(q)}</code><span class="q-n">${n} → <b>${after}</b></span>
+        <button data-qdel="${k}" aria-label="Retirer la requête">✕</button></li>`;
+      n = after; return html; }).join('') || '<li class="q-empty">Aucune requête : les 12 territoires sont sélectionnés.</li>';
+  };
   const paint = () => {
-    $('enGrid').innerHTML = E.terr.map(x => enigCard(x, st)).join('');
-    $('enMap').querySelectorAll('[data-ei]').forEach(el => el.classList.toggle('out', st.out.has(+el.dataset.ei)));
-    const rest = E.terr.filter(x => !st.out.has(x.i));
+    $('enGrid').innerHTML = E.terr.map(x => enigCard(x, st, failing(x))).join('');
+    const rest = remaining(), few = rest.length <= 3;
+    $('enMap').querySelectorAll('[data-ei]').forEach(el => { const i = +el.dataset.ei;
+      el.classList.toggle('out', st.out.has(i) || !!failing(E.terr[i]));
+      el.classList.toggle('sel', few && rest.some(x => x.i === i)); });
+    $('qCount').innerHTML = `Sélection : <b>${rest.length}</b> territoire${rest.length > 1 ? 's' : ''} sur ${E.terr.length}`;
+    $('qBar').style.width = ((E.terr.length - rest.length) / (E.terr.length - 1) * 100) + '%';
     const go = $('enGo');
     go.disabled = rest.length !== 1 || st.done;
-    go.innerHTML = rest.length === 1 ? `${icon('check', 18)} Envoyer le camion : n° ${rest[0].i + 1}` : `Encore ${rest.length - 1} fiche${rest.length > 2 ? 's' : ''} à rayer`;
+    go.innerHTML = rest.length === 1 ? `${icon('check', 18)} Envoyer le camion : n° ${rest[0].i + 1}`
+      : rest.length ? `Encore ${rest.length - 1} territoire${rest.length > 2 ? 's' : ''} à écarter` : 'Aucun territoire : retirez une requête';
     $('enTries').innerHTML = `Essais : ${'●'.repeat(st.tries)}<span class="lost">${'●'.repeat(ENIG_TRIES[d] - st.tries)}</span>`;
     $('enClock').textContent = fmtTime(st.left);
     $('enClock').classList.toggle('hurry', st.left <= 20);
@@ -245,8 +291,27 @@ function startEnigma(then) {
   };
   $('enGrid').addEventListener('click', e => { const b = e.target.closest('[data-ei]'); if (b) toggle(+b.dataset.ei); });
   $('enMap').addEventListener('click', e => { const b = e.target.closest('[data-ei]'); if (b) toggle(+b.dataset.ei); });
+  // Construction des requêtes
+  const fillVals = () => { const f = qField($('qA').value);
+    $('qV').innerHTML = f.vals.map((v, i) => `<option value="${i}">${v}</option>`).join('');
+    $('qOp').value = f.a === 'not' ? '0' : $('qOp').value; $('qOp').disabled = f.a === 'not'; };
+  $('qA').onchange = fillVals; fillVals();
+  $('qAdd').onclick = () => {
+    if (st.done) return;
+    const q = { a: $('qA').value, eq: $('qOp').value === '1', v: +$('qV').value };
+    if (q.a === 'not') q.eq = true;
+    if (st.filters.some(f => f.a === q.a && f.eq === q.eq && f.v === q.v)) { toast('Cette requête est déjà appliquée.'); return; }
+    const before = remaining().length;
+    st.filters.push(q); paintQuery(); paint();
+    const after = remaining().length;
+    toast(`${qText(q)} : ${before - after} territoire${before - after > 1 ? 's' : ''} écarté${before - after > 1 ? 's' : ''}`, after ? 'ok' : 'ko');
+    sfx(after ? 'ok' : 'ko');
+  };
+  $('qHist').addEventListener('click', e => { const b = e.target.closest('[data-qdel]'); if (!b || st.done) return;
+    st.filters.splice(+b.dataset.qdel, 1); sfx('click'); paintQuery(); paint(); });
+  paintQuery();
   $('enGo').onclick = () => {
-    const rest = E.terr.filter(x => !st.out.has(x.i));
+    const rest = remaining();
     if (rest.length !== 1 || st.done) return;
     if (rest[0].i === E.target) { end(true); return; }
     st.tries--; st.wrong.add(rest[0].i); st.out.add(rest[0].i);

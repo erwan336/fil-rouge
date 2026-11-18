@@ -86,3 +86,38 @@
   .ec{font-size:.66rem;padding:2px 6px}
   .en-foot .btn{width:100%}
 }
+
+/* ---------- Requête SIG (filtrage progressif) ---------- */
+.en-right{display:flex;flex-direction:column;gap:12px;min-width:0}
+.en-query{background:#0b1820;border:1px solid var(--glass-line);border-radius:12px;padding:12px 14px;font-family:Consolas,monospace}
+.q-title{display:flex;align-items:center;gap:6px;color:#2dd4bf;font-weight:700;letter-spacing:.04em;margin-bottom:8px}
+.q-title small{color:#7fa8a2;font-weight:400;margin-left:6px}
+.q-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.q-kw{color:#ffb02e;font-weight:700;font-size:.85rem}
+.q-row select{font:inherit;font-size:.9rem;background:#13262d;color:#e6f2ef;border:1px solid var(--glass-line);border-radius:8px;padding:7px 8px}
+.q-row select:disabled{opacity:.6}
+.q-add.btn{width:auto;font-size:.85rem;padding:8px 14px;letter-spacing:.03em}
+.q-hist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.q-hist li{display:flex;align-items:center;gap:8px;background:rgba(45,212,191,.08);border-left:3px solid #2dd4bf;border-radius:6px;padding:5px 8px;font-size:.85rem;animation:qIn .35s ease}
+@keyframes qIn{from{opacity:0;transform:translateX(-8px)}}
+.q-hist li.q-empty{border-left-color:#5f8c88;color:#7fa8a2;background:none;animation:none}
+.q-step{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#2dd4bf;color:#0b1820;font-weight:700;font-size:.75rem;flex:none}
+.q-hist code{color:#e6f2ef;flex:1}
+.q-n{color:#9fc5bf}
+.q-n b{color:#ffb02e}
+.q-hist button{border:none;background:none;color:#ff8a7a;font-weight:700;padding:2px 6px}
+.q-count{margin-top:10px;font-size:.88rem;color:#cfe7e3}
+.q-count b{color:#ffb02e;font-size:1.05rem}
+.q-count i{display:block;height:6px;margin-top:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.q-count i b{display:block;height:100%;width:0;background:linear-gradient(90deg,#2dd4bf,#ffb02e);transition:width .5s ease}
+/* Fiche écartée par une requête */
+.efiche.filt{opacity:.32;filter:grayscale(1)}
+.ef-why{font-family:Consolas,monospace;font-size:.68rem;font-weight:700;color:#7a2318;background:#f3d9d3;border-radius:6px;padding:2px 6px;align-self:flex-start}
+.efiche.win .ef-why{display:none}
+.efiche.win{opacity:1!important;filter:none!important}
+/* Carte : les territoires encore sélectionnés clignotent quand il en reste 3 ou moins */
+.en-map .terr.sel{stroke:#2dd4bf;stroke-width:2.6;animation:qSel 1.2s ease-in-out infinite}
+.en-map .enum.sel circle{fill:#2dd4bf}
+@keyframes qSel{50%{stroke-opacity:.35}}
+@media (prefers-reduced-motion:reduce){.en-map .terr.sel,.q-hist li{animation:none}}
+@media (max-width:480px){.q-row select{flex:1;min-width:0}.q-add.btn{width:100%}}
