@@ -93,7 +93,8 @@ function articleHtml() {
       <p><b>Résultats.</b> ${found.length} hypothèse${found.length > 1 ? 's' : ''} sur ${GOAL} confirmée${found.length > 1 ? 's' : ''}${found.length ? ' : ' + found.map(f => f.name.toLowerCase()).join(', ') : ''}.
         ${state.errors} hypothèse${state.errors > 1 ? 's' : ''} réfutée${state.errors > 1 ? 's' : ''}${rumors ? `, ${rumors} rumeur${rumors > 1 ? 's' : ''} à écarter` : ''}.
         Aucune discipline, seule, ne détenait l'explication.</p>
-      ${state.enigRes ? `<p><b>Recommandation.</b> ${state.enigRes.ok ? 'Installer' : 'Étudier l\'installation d\''} une antenne mobile de dépistage
+      ${state.enigRes && state.enigRes.kind === 'photo' ? `<p><b>Données de terrain.</b> Une photo sans coordonnées a été ${state.enigRes.ok ? 'géolocalisée' : 'étudiée'} (${esc(state.enigRes.name)}) en croisant ${state.enigRes.conds} indices : un travail de géocodage collectif.</p>` : ''}
+      ${state.enigRes && state.enigRes.kind !== 'photo' ? `<p><b>Recommandation.</b> ${state.enigRes.ok ? 'Installer' : 'Étudier l\'installation d\''} une antenne mobile de dépistage
         dans le territoire <b>${state.enigRes.name}</b>, choisi en croisant ${state.enigRes.conds} critères apportés par l'équipe.</p>` : ''}
       <p><b>Conclusion.</b> Les causes de la maladie sont sociales, territoriales et politiques autant que médicales :
         les comprendre exige une recherche <b>interdisciplinaire et collaborative</b>.</p>

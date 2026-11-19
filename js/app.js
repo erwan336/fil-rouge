@@ -37,7 +37,7 @@ const DURATIONS = [3, 4, 5];     // minutes d'enquête
 const GOAL = 6;                  // 6 vraies causes au total
 const state = {
   mode: 'team', nb: 3, teamName: '',             // mode : 'solo', 'team' (2-3) ou 'group' (4-10)
-  durIdx: 1, disIdx: 0, customName: '', diff: 1,  // autres réglages de l'accueil (diff : 0 Facile, 1 Normal, 2 Expert)
+  durIdx: 1, disIdx: 0, customName: '', diff: 1, enigPref: 2,  // autres réglages de l'accueil (diff : 0 Facile, 1 Normal, 2 Expert)
   code: '', players: [], allTiles: [], tiles: [],
   levels: [], lvl: 0, levelFound: 0, foundIds: new Set(), errors: 0, livesKept: 0, timeBank: 0,
   lives: 3, picked: null, over: false,
@@ -199,6 +199,7 @@ function renderSettings() {
   $('playersRow').classList.toggle('hidden', state.mode === 'solo');
   $('durRow').classList.toggle('hidden', state.mode !== 'group');  // solo et équipe : chaque niveau a son temps
   $('fVal').textContent = DIFFS[state.diff].name;
+  $('eVal').textContent = ENIG_KINDS[state.enigPref];
   $('teamName').classList.toggle('hidden', state.mode !== 'team');
   $('modeTip').textContent = MODES[state.mode].tip;
   state.teamName = state.mode === 'team' ? $('teamName').value.trim() : '';
@@ -268,7 +269,10 @@ function startGame() {
   } else state.gameDis = state.disIdx;
   setDisease(diseaseFor(state.gameDis, state.customName));
   // La graine porte aussi la difficulté : graine % 3 = difficulté (lue par les téléphones)
-  let seed; do { seed = 100 + Math.floor(Math.random() * 900); } while (seed % 3 !== state.diff);
+  // … et le type d'énigme finale : Math.floor(graine / 3) % 2 (0 camion, 1 photo mystère)
+  const kind = state.enigPref === 2 ? Math.floor(Math.random() * 2) : state.enigPref;
+  let seed; do { seed = 100 + Math.floor(Math.random() * 900); }
+  while (seed % 3 !== state.diff || enigKind(seed) !== kind || (kind === 1 && !buildPhotoEnigma(seed, state.nb)));
   state.revealed = new Set();                         // indices retournés (solo)
   state.code = makeCode(state.nb, state.gameDis, seed);
   state.players = deal(state.nb, seed);
@@ -537,7 +541,7 @@ function endLevel(reason) {
   if (state.lvl < state.levels.length - 1) { showInterlude(reason); return; }
   // Dernier niveau : l'énigme finale (js/enigma.js), puis le bilan
   state.enigRes = null;
-  setTimeout(() => startEnigma(res => { state.enigRes = res; finish(reason); }), 1200);
+  setTimeout(() => (enigKind(state.scen.seed) ? startPhotoEnigma : startEnigma)(res => { state.enigRes = res; finish(reason); }), 1200);
 }
 
 /** Écran de transition entre deux niveaux */
@@ -596,7 +600,7 @@ function finish(reason) {
       ${state.mode === 'team' ? `<p class="small">Annoncez ce score aux autres équipes : le plus de fils gagne, puis le plus de vies gardées, puis le plus d'avance.</p>` : ''}
       ${state.enigRes ? `<div class="en-sum ${state.enigRes.ok ? 'ok' : 'ko'}">${icon('target', 18)}
         <span><b>Énigme finale : ${state.enigRes.ok ? 'résolue' : 'non résolue'}</b>
-        Le camion de dépistage part pour <b>${state.enigRes.name}</b>. ${state.enigRes.conds} conditions, toutes indispensables :
+        ${state.enigRes.kind === 'photo' ? `La photo mystère venait de <b>${state.enigRes.name}</b>.` : `Le camion de dépistage part pour <b>${state.enigRes.name}</b>.`} ${state.enigRes.conds} indices, tous indispensables :
         ${state.enigRes.ok ? "c'est en les mettant toutes ensemble que vous avez trouvé." : 'il manquait une voix dans la discussion.'}</span></div>` : ''}
       ${articleHtml()}
       <div class="legend">${legend}</div>
@@ -726,7 +730,7 @@ function openPlayer(code, n, name = '') {
           <footer class="d-foot">${own ? 'Votre propre analyse : vous pouvez lui faire confiance.' : 'Information recueillie sur le terrain : fiable… ou pas ? Discutez-en.'}</footer>
         </article>`; }).join('')}
       <div class="en-phone-sep">${icon('target', 16)} Pour la fin de la partie</div>
-      ${enigPhoneHtml(code, n, g.nb, g.seed)}
+      ${(enigKind(g.seed) ? photoPhoneHtml : enigPhoneHtml)(code, n, g.nb, g.seed)}
       <div class="glass" style="text-align:center">
         <b style="font-size:1.15rem">Ne montrez pas votre écran. Parlez !</b>
         <p class="small" style="margin:8px 0 0;color:#c8dcd8">Gardez le doigt sur une carte pour lire votre indice : il se cache dès que vous lâchez.</p>
@@ -768,6 +772,9 @@ function init() {
   $('dMinus').onclick = () => { state.durIdx = Math.max(0, state.durIdx - 1); renderSettings(); };
   $('dPlus').onclick = () => { state.durIdx = Math.min(DURATIONS.length - 1, state.durIdx + 1); renderSettings(); };
   $('fMinus').onclick = () => { state.diff = Math.max(0, state.diff - 1); renderSettings(); };
+  $('icEnig').innerHTML = icon('target', 18);
+  $('eMinus').onclick = () => { state.enigPref = (state.enigPref + 2) % 3; renderSettings(); };
+  $('ePlus').onclick = () => { state.enigPref = (state.enigPref + 1) % 3; renderSettings(); };
   $('fPlus').onclick = () => { state.diff = Math.min(DIFFS.length - 1, state.diff + 1); renderSettings(); };
   $('icDiff').innerHTML = icon('star', 18);
   const nDis = DISEASES.length + 2;               // les maladies + « Autre maladie » + « Au hasard »
