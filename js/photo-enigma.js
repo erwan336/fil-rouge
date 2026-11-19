@@ -10,6 +10,8 @@
    - Un seul lieu respecte tous les indices, et chaque indice est
      indispensable (méthode : on choisit les indices, puis on cherche des
      lieux « leurres » que seul cet indice élimine).
+   Ce fichier contient aussi le MOTEUR COMMUN des énigmes « lieu mystère »
+   (réutilisé par js/hosp-enigma.js).
    ===================================================================== */
 
 const CLB_AT = [4.884, 45.737];                      // Centre Léon Bérard (Lyon 8e)
@@ -39,18 +41,20 @@ function phPredicates(t, rand) {
   ];
 }
 
-/** Construit l'énigme photo (même graine = même énigme sur tous les appareils).
+/** Moteur commun aux énigmes « lieu mystère » (même graine = même énigme sur tous les appareils).
  *  On ajoute les indices un par un : chaque nouvel indice doit avoir son propre « leurre »,
- *  un lieu que lui seul élimine ; les leurres déjà choisis doivent rester valables. */
-function buildPhotoEnigma(seed, nb) {
-  const rand = rng(seed * 4241 + nb * 17 + 3);
-  const K = enigCount(nb), A = Math.min(K, 6), E = K - A, GAP = 4;
-  const far = (x, list) => list.every(y => Math.hypot((x.lon - y.lon) * .7 * 111.2, (x.lat - y.lat) * 111.2) >= GAP);
+ *  un lieu que lui seul élimine ; les leurres déjà choisis doivent rester valables.
+ *  pool : lieux {lon, lat, ...} · predsOf(t, rand) : indices possibles
+ *  gapKm : écart minimal entre deux lieux (lisibilité de la carte) · notText(x, n) : « ce n'est pas le n° n » */
+function buildPlaceEnigma(pool, predsOf, roles, salt, gapKm, notText, seed, nb) {
+  const rand = rng(seed * 4241 + nb * 17 + salt);
+  const K = enigCount(nb), A = Math.min(K, 6), E = K - A;
+  const far = (x, list) => list.every(y => Math.hypot((x.lon - y.lon) * .7 * 111.2, (x.lat - y.lat) * 111.2) >= gapKm);
   for (let attempt = 0; attempt < 300; attempt++) {
-    const t = CASERNES[Math.floor(rand() * CASERNES.length)];
-    const order = shuffle(CASERNES, rand).filter(x => x !== t);
+    const t = pool[Math.floor(rand() * pool.length)];
+    const order = shuffle(pool, rand).filter(x => x !== t);
     const preds = [], priv = [], chosen = [t];
-    for (const p of shuffle(phPredicates(t, rand), rand)) {
+    for (const p of shuffle(predsOf(t, rand).filter(Boolean), rand)) {
       if (preds.length === A) break;
       if (!priv.every(x => p.f(x))) continue;            // un leurre existant serait aussi éliminé : on saute
       const c = order.find(x => !chosen.includes(x) && !p.f(x) && preds.every(q => q.f(x)) && far(x, chosen));
@@ -58,26 +62,25 @@ function buildPhotoEnigma(seed, nb) {
     }
     if (preds.length < A) continue;
     const passAll = x => preds.every(p => p.f(x));
-    const nots = order.filter(x => !chosen.includes(x) && passAll(x));
     const notPick = [];
-    for (const x of nots) { if (notPick.length < E && far(x, chosen)) { notPick.push(x); chosen.push(x); } }
+    for (const x of order) { if (notPick.length < E && !chosen.includes(x) && passAll(x) && far(x, chosen)) { notPick.push(x); chosen.push(x); } }
     if (notPick.length < E) continue;
     const want = Math.max(8, Math.min(12, chosen.length + 2));
     for (const x of order) { if (chosen.length >= want) break;
       if (!chosen.includes(x) && preds.filter(p => !p.f(x)).length >= 2 && far(x, chosen)) chosen.push(x); }
-    const places = shuffle(chosen, rand).map((x, i) => ({ ...x, i }));
-    const target = places.findIndex(x => x.n === t.n && x.ph === t.ph);
+    const sh = shuffle(chosen, rand), places = sh.map((x, i) => ({ ...x, i })), target = sh.indexOf(t);
     const conds = [...preds.map(p => ({ a: p.id, f: p.f, text: p.text })),
-      ...notPick.map(x => { const i = places.findIndex(y => y.n === x.n && y.ph === x.ph);
-        return { a: 'not', f: y => y.i !== i, text: `Ce n'est pas le lieu n° ${i + 1} (${x.c}) : une autre équipe y a déjà enquêté.` }; })];
+      ...notPick.map(x => { const i = sh.indexOf(x); return { a: 'not', f: y => y.i !== i, text: notText(x, i + 1) }; })];
     const sol = places.filter(x => conds.every(c => c.f(x)));
     const needed = conds.every((c, k) => places.filter(x => conds.every((d, j) => j === k || d.f(x))).length > 1);
     if (sol.length !== 1 || sol[0].i !== target || !needed) continue;
-    return { places, target, clues: shuffle(conds, rand).map(c => ({ ...c, role: PH_ROLE[c.a] })) };
+    return { places, target, clues: shuffle(conds, rand).map(c => ({ ...c, role: roles[c.a] })) };
   }
   return null;
 }
 const PH_ROLE = { ref:'dec', ngrp:'sp', ns:'geo', ew:'geo', d10:'epi', d25:'inf', d40:'clin', let:'soc', st:'pat', hy:'soc', cp:'dm', not:'stat' };
+const buildPhotoEnigma = (seed, nb) => buildPlaceEnigma(CASERNES, phPredicates, PH_ROLE, 3, 4,
+  (x, n) => `Ce n'est pas le lieu n° ${n} (${x.c}) : une autre équipe y a déjà enquêté.`, seed, nb);
 
 /** Carte SIG : cercles de distance autour du CLB et lieux candidats numérotés */
 function photoMap(E) {
@@ -96,49 +99,43 @@ function photoMap(E) {
   return box.innerHTML;
 }
 
-/** Lance l'énigme photo ; then(résultat) à la fin */
-function startPhotoEnigma(then) {
-  const E = buildPhotoEnigma(state.scen.seed, state.nb);
-  if (!E) { startEnigma(then); return; }
-  const d = state.scen.diff, x0 = E.places[E.target];
+/** Interface commune des énigmes « lieu mystère ».
+ *  cfg : E, kind, kick, title, lead, figure, map, item(x), go(x), cap(x0), okTxt, koTxt, verdict(x0), name(x0), help, cdTitle, cdSub */
+function startPlaceEnigma(cfg, then) {
+  const { E } = cfg, d = state.scen.diff, x0 = E.places[E.target];
   const st = { E, out: new Set(), wrong: new Set(), tries: ENIG_TRIES[d], left: ENIG_TIME[d], done: false, timer: null };
   state.enig = st;
   $('result').innerHTML = `
     <div class="enigma glass photo-en" id="enigma">
       <div class="en-head">
-        <span class="en-kick">${icon('target', 16)} Énigme finale · Photo mystère</span>
+        <span class="en-kick">${icon('target', 16)} Énigme finale · ${cfg.kick}</span>
         <span class="en-clock" id="enClock"></span>
         <span class="en-tries" id="enTries"></span>
       </div>
-      <h2>Où cette photo de terrain a-t-elle été prise ?</h2>
-      <p class="en-lead">Pendant l'enquête, une photo a perdu sa <b>géolocalisation</b>. Sans elle, impossible de l'intégrer au SIG.
-        ${solo() ? 'Croisez les indices ci-dessous avec la photo et la carte.'
+      <h2>${cfg.title}</h2>
+      <p class="en-lead">${cfg.lead}
+        ${solo() ? 'Croisez les indices ci-dessous avec la carte.'
                  : `Ouvrez la carte <b>« Énigme finale »</b> sur vos téléphones : chacun détient ${state.nb <= 3 ? 'deux indices' : 'un indice'}.
         <b>Un seul lieu</b> les respecte tous, et chaque indice est indispensable.`}</p>
       ${solo() ? `<ol class="en-conds">${E.clues.map(c => `<li style="--c:${COLORS[roleById(c.role).color]}"><small>${roleById(c.role).name}</small>${c.text}</li>`).join('')}</ol>` : ''}
       <div class="ph-body">
-        <figure class="ph-photo">
-          <img src="${x0.ph}" alt="Photo mystère : un lieu du Rhône à retrouver" referrerpolicy="no-referrer"
-            onerror="this.parentNode.classList.add('noimg')">
-          <figcaption id="phCap">Photo de terrain · lieu inconnu</figcaption>
-          <div class="ph-noimg">Photo indisponible (pas de connexion ?) : utilisez seulement les indices et la carte.</div>
-        </figure>
-        <div class="sigmap en-map" id="enMap">${photoMap(E)}</div>
+        ${cfg.figure}
+        <div class="sigmap en-map" id="enMap">${cfg.map}</div>
         <ol class="ph-list" id="phList"></ol>
       </div>
       <div class="en-foot">
-        <span class="en-help">Touchez un lieu (liste ou carte) pour l'écarter. Quand il n'en reste qu'un, géolocalisez la photo.</span>
+        <span class="en-help">${cfg.help}</span>
         <button class="btn btn-red" id="enGo" disabled></button>
       </div>
     </div>`;
   const rest = () => E.places.filter(x => !st.out.has(x.i));
   const paint = () => {
     $('phList').innerHTML = E.places.map(x => `<li><button class="ph-item ${st.out.has(x.i) ? 'out' : ''} ${st.wrong.has(x.i) ? 'wrong' : ''}" data-pi="${x.i}">
-      <b class="ef-n">${x.i + 1}</b><span><b>${x.c}</b><small>${x.cp} · groupement ${x.g} · ${x.r === 'Métropole' ? 'Métropole' : 'Département'}</small></span></button></li>`).join('');
+      <b class="ef-n">${x.i + 1}</b><span>${cfg.item(x)}</span></button></li>`).join('');
     $('enMap').querySelectorAll('[data-pi]').forEach(el => el.classList.toggle('out', st.out.has(+el.dataset.pi)));
     const r = rest(), go = $('enGo');
     go.disabled = r.length !== 1 || st.done;
-    go.innerHTML = r.length === 1 ? `${icon('map', 18)} Géolocaliser la photo : n° ${r[0].i + 1}` : r.length ? `Encore ${r.length - 1} lieu${r.length > 2 ? 'x' : ''} à écarter` : 'Aucun lieu : rétablissez-en un';
+    go.innerHTML = r.length === 1 ? `${icon('map', 18)} ${cfg.go(r[0])}` : r.length ? `Encore ${r.length - 1} lieu${r.length > 2 ? 'x' : ''} à écarter` : 'Aucun lieu : rétablissez-en un';
     $('enTries').innerHTML = `Essais : ${'●'.repeat(st.tries)}<span class="lost">${'●'.repeat(ENIG_TRIES[d] - st.tries)}</span>`;
     $('enClock').textContent = fmtTime(st.left);
     $('enClock').classList.toggle('hurry', st.left <= 20);
@@ -148,12 +145,12 @@ function startPhotoEnigma(then) {
     st.done = true; clearInterval(st.timer); paint();
     $('enMap').querySelectorAll(`[data-pi="${E.target}"]`).forEach(el => el.classList.add('win'));
     document.querySelector(`.ph-item[data-pi="${E.target}"]`).classList.add('win');
-    $('phCap').innerHTML = `<b>${x0.n}</b> · ${x0.a}, ${x0.cp} ${x0.c} · photo SDMIS`;
+    $('phCap').innerHTML = cfg.cap(x0);
     $('enigma').insertAdjacentHTML('beforeend', `<div class="en-verdict ${ok ? 'ok' : 'ko'}">
-      <b>${ok ? 'Photo géolocalisée : la donnée rejoint le SIG !' : 'La photo reste sans lieu…'}</b>
-      <span>C'était la caserne de pompiers de <b>${x0.c}</b> (n° ${x0.i + 1}).</span>
+      <b>${ok ? cfg.okTxt : cfg.koTxt}</b>
+      <span>${cfg.verdict(x0)}</span>
       <button class="btn btn-ink" id="enNext">Voir le bilan ${icon('arrow')}</button></div>`);
-    $('enNext').onclick = () => then({ kind: 'photo', ok, name: x0.c, conds: E.clues.length });
+    $('enNext').onclick = () => then({ kind: cfg.kind, ok, name: cfg.name(x0), conds: E.clues.length });
     sfx(ok ? 'win' : 'lose'); if (ok) confetti();
   };
   $('phList').addEventListener('click', e => { const b = e.target.closest('[data-pi]'); if (b) toggle(+b.dataset.pi); });
@@ -176,27 +173,56 @@ function startPhotoEnigma(then) {
   };
   $('timerTxt').textContent = fmtTime(st.left);
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  countdown('Photo mystère', `${E.clues.length} indices · ${E.places.length} lieux · 1 seule photo`, () => { if (!st.done) st.timer = setInterval(tick, 1000); });
+  countdown(cfg.cdTitle, `${E.clues.length} indices · ${E.places.length} ${cfg.cdSub}`, () => { if (!st.done) st.timer = setInterval(tick, 1000); });
 }
 
-/** Indice(s) « Photo mystère » sur le téléphone */
-function photoPhoneHtml(code, n, nb, seed) {
-  const E = buildPhotoEnigma(seed, nb); if (!E) return enigPhoneHtml(code, n, nb, seed);
+/** Lance l'énigme photo ; then(résultat) à la fin */
+function startPhotoEnigma(then) {
+  const E = buildPhotoEnigma(state.scen.seed, state.nb);
+  if (!E) { startEnigma(then); return; }
+  startPlaceEnigma({ E, kind: 'photo', kick: 'Photo mystère', title: 'Où cette photo de terrain a-t-elle été prise ?',
+    lead: "Pendant l'enquête, une photo a perdu sa <b>géolocalisation</b>. Sans elle, impossible de l'intégrer au SIG.",
+    figure: `<figure class="ph-photo">
+          <img src="${E.places[E.target].ph}" alt="Photo mystère : un lieu du Rhône à retrouver" referrerpolicy="no-referrer"
+            onerror="this.parentNode.classList.add('noimg')">
+          <figcaption id="phCap">Photo de terrain · lieu inconnu</figcaption>
+          <div class="ph-noimg">Photo indisponible (pas de connexion ?) : utilisez seulement les indices et la carte.</div>
+        </figure>`,
+    map: photoMap(E),
+    item: x => `<b>${x.c}</b><small>${x.cp} · groupement ${x.g} · ${x.r === 'Métropole' ? 'Métropole' : 'Département'}</small>`,
+    go: x => `Géolocaliser la photo : n° ${x.i + 1}`,
+    cap: x => `<b>${x.n}</b> · ${x.a}, ${x.cp} ${x.c} · photo SDMIS`,
+    okTxt: 'Photo géolocalisée : la donnée rejoint le SIG !', koTxt: 'La photo reste sans lieu…',
+    verdict: x => `C'était la caserne de pompiers de <b>${x.c}</b> (n° ${x.i + 1}).`, name: x => x.c,
+    help: "Touchez un lieu (liste ou carte) pour l'écarter. Quand il n'en reste qu'un, géolocalisez la photo.",
+    cdTitle: 'Photo mystère', cdSub: 'lieux · 1 seule photo' }, then);
+}
+
+/** Indice(s) d'une énigme « lieu mystère » sur le téléphone */
+function placePhoneHtml(E, code, n, nb, tag, kick, q, foot) {
   const mine = E.clues.filter((_, k) => k % nb === n - 1);
   return mine.map((c, i) => { const r = roleById(c.role); return `
     <article class="paper clue dossier enigma-card" style="--c:#c0392b">
-      <header class="d-head"><span>Énigme finale · Photo mystère</span><span>N° ${code}-${n}-P${mine.length > 1 ? i + 1 : ''}</span></header>
+      <header class="d-head"><span>Énigme finale · ${kick}</span><span>N° ${code}-${n}-${tag}${mine.length > 1 ? i + 1 : ''}</span></header>
       <span class="d-stamp">À la fin</span>
-      <div class="d-role"><i>${icon('map', 26)}</i><div><small>Indice ${i + 1}${mine.length > 1 ? ' sur ' + mine.length : ''} · ${r.name}</small><b>Où a été prise la photo ?</b></div></div>
+      <div class="d-role"><i>${icon('map', 26)}</i><div><small>Indice ${i + 1}${mine.length > 1 ? ' sur ' + mine.length : ''} · ${r.name}</small><b>${q}</b></div></div>
       <p>${c.text}</p>
       <div class="d-hold">${icon('finger', 16)} Maintenez le doigt pour lire</div>
-      <footer class="d-foot">À lire quand le grand écran montre la photo mystère. Dites-le à voix haute : sans votre indice, impossible de trouver.</footer>
+      <footer class="d-foot">${foot}</footer>
     </article>`; }).join('');
+}
+function photoPhoneHtml(code, n, nb, seed) {
+  const E = buildPhotoEnigma(seed, nb); if (!E) return enigPhoneHtml(code, n, nb, seed);
+  return placePhoneHtml(E, code, n, nb, 'P', 'Photo mystère', 'Où a été prise la photo ?',
+    'À lire quand le grand écran montre la photo mystère. Dites-le à voix haute : sans votre indice, impossible de trouver.');
 }
 
 /* ---------------------------------------------------------------------
    Choix de l'énigme finale, caché dans la graine du code de partie :
-   Math.floor(graine / 3) % 2 → 0 = camion de dépistage, 1 = photo mystère
+   Math.floor(graine / 3) % 3 → 0 = camion de dépistage, 1 = photo mystère, 2 = hôpital mystère
    --------------------------------------------------------------------- */
-const ENIG_KINDS = ['Camion de dépistage', 'Photo mystère', '🎲 Au hasard'];
-const enigKind = seed => Math.floor(seed / 3) % 2;
+const ENIG_KINDS = ['Camion de dépistage', 'Photo mystère', 'Hôpital mystère', '🎲 Au hasard'];
+const enigKind = seed => Math.floor(seed / 3) % 3;
+const enigOk = (seed, nb) => [() => true, buildPhotoEnigma, buildHospEnigma][enigKind(seed)](seed, nb) !== null;
+const enigStarter = seed => [startEnigma, startPhotoEnigma, startHospEnigma][enigKind(seed)];
+const enigPhone = seed => [enigPhoneHtml, photoPhoneHtml, hospPhoneHtml][enigKind(seed)];
