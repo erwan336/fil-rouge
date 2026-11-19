@@ -66,7 +66,7 @@ function countdown(label, sub, done) {
     if (i >= steps.length) { o.remove(); done(); return; }
     const s = steps[i++], go = s === 'GO';
     o.innerHTML = `<div><div class="cd-lbl">${label}</div><div class="cd-sub">${sub}</div>
-      <div class="cd-n ${go ? 'go' : ''}">${go ? 'Enquêtez !' : s}</div></div>`;
+      <div class="cd-n ${go ? 'go' : ''}">${go ? 'Cherchez !' : s}</div></div>`;
     sfx(go ? 'go' : 'tick');
     setTimeout(step, REDUCED() ? 250 : go ? 650 : 700);
   };
@@ -116,7 +116,7 @@ const store = {
    E. ACCUEIL
    ===================================================================== */
 const RULES_HTML = `<ol class="rules3" style="color:inherit">
-  <li>Trouvez les 6 vraies causes sur le mur.</li>
+  <li>Testez les hypothèses du mur : 6 sont confirmées par les données.</li>
   <li>Chacun a un indice secret. Ne le montrez pas : parlez !</li>
   <li>3 erreurs et l'enquête est perdue.</li></ol>`;
 
@@ -252,7 +252,7 @@ const starsHtml = n => '★'.repeat(n) + '<span style="opacity:.3">' + '★'.rep
 function levelCard(L, i) {
   const n = L.fams.length + L.fakes.length;
   return `<div class="lvcard"><span class="lvstars">${starsHtml(L.stars)}</span>
-    <b>Niveau ${i + 1} · ${L.name}</b><span>${n} pistes · ${'♥'.repeat(L.lives)} · ${fmtTime(L.time)}</span></div>`;
+    <b>Niveau ${i + 1} · ${L.name}</b><span>${n} hypothèses · ${'♥'.repeat(L.lives)} · ${fmtTime(L.time)}</span></div>`;
 }
 
 /* =====================================================================
@@ -292,8 +292,9 @@ function prepareLevel() {
 /** Les 3 règles (la 3e change selon le mode) */
 function rulesHtml() {
   return `<ol class="rules3" style="color:inherit">
-    <li>Trouvez les vraies causes sur le mur.</li>
-    <li>Chacun a des indices secrets. Ne les montrez pas : parlez !</li>
+    <li>Réunion d'équipe : chaque discipline présente son regard.</li>
+    <li>Testez les hypothèses du mur : confirmez les vraies causes.</li>
+    <li>Chacun détient des données secrètes. Ne les montrez pas : débattez !</li>
     <li>${multi() ? '3 niveaux : toujours plus de fausses pistes, toujours moins de vies.' : "3 erreurs et l'enquête est perdue."}</li>
     <li>À la fin, l'énigme finale : chacun détient une condition, il les faut toutes pour trouver.</li></ol>`;
 }
@@ -332,10 +333,10 @@ function renderLobby() {
         ${multi() ? `<div class="lvlist">${state.levels.map(levelCard).join('')}</div>`
                   : `<p class="hand" style="color:#ffd9a0;font-size:1.05rem">Lisez vos indices en silence… puis c'est parti pour ${fmtTime(lvl().time)} !</p>`}
         <p class="small" style="color:#ffd9a0">${icon('target', 14)} Gardez la carte « Énigme finale » de votre téléphone pour la fin : elle servira à tout le groupe.</p>
-        <button class="btn btn-go" id="goWall" style="margin-top:8px">Tout le monde a lu : enquêtons ! ${icon('arrow')}</button>
+        <button class="btn btn-go" id="goWall" style="margin-top:8px">Tout le monde a lu : réunion d'équipe ${icon('arrow')}</button>
       </div>
     </div>`;
-  $('goWall').onclick = startWall;
+  $('goWall').onclick = () => teamMeeting(startWall);   // tour de table (js/research.js)
 }
 
 /* =====================================================================
@@ -355,7 +356,7 @@ function renderHud() {
 
 /** Journal d'enquête : une ligne par piste validée */
 function logHtml() {
-  if (!state.log.length) return `<li class="empty">Aucune piste validée pour l'instant.<br>Parlez, puis touchez une piste.</li>`;
+  if (!state.log.length) return `<li class="empty">Aucune hypothèse testée pour l'instant.<br>Discutez, puis touchez une hypothèse.</li>`;
   return state.log.slice().reverse().map(e => `<li class="${e.ok ? 'ok' : 'ko'}" style="--f:${e.color}">
     <span class="lt">${e.when}</span><span class="li">${e.ok ? '✓' : '✕'}</span>
     <span class="lx"><b>${e.text}</b>${e.detail}</span></li>`).join('');
@@ -363,7 +364,7 @@ function logHtml() {
 function logEntry(t) {
   const L = lvl(), used = L.time - state.timeLeft;
   state.log.push({ ok: t.ok, text: t.text, color: t.ok ? t.family.color : '#7a6a5a',
-    detail: t.ok ? t.family.name : 'Fausse piste', when: (multi() ? `N${state.lvl + 1} · ` : '') + fmtTime(used) });
+    detail: t.ok ? 'Confirmée · ' + t.family.name : 'Réfutée', when: (multi() ? `N${state.lvl + 1} · ` : '') + fmtTime(used) });
   const box = $('caseLog'); if (box) box.innerHTML = logHtml();
 }
 
@@ -373,7 +374,7 @@ function startWall() {
   $('s-wall').innerHTML = `
     <div id="result"></div>
     ${multi() ? `<div class="lvbanner"><span class="lvstars">${starsHtml(L.stars)}</span>
-      <b>Niveau ${state.lvl + 1} · ${L.name}</b><span>Trouvez ${L.fams.length} vraies causes parmi ${state.tiles.length} pistes</span></div>` : ''}
+      <b>Niveau ${state.lvl + 1} · ${L.name}</b><span>Confirmez ${L.fams.length} hypothèses parmi ${state.tiles.length}</span></div>` : ''}
     <div class="wall-layout">
     <div class="wall" id="wall">
       <svg class="threads" id="threads" aria-hidden="true"></svg>
@@ -384,7 +385,7 @@ function startWall() {
         <div class="sigleg">${FAMILIES.map(f => `<span data-l="${f.id}" style="--f:${f.color}">${f.name}</span>`).join('')}</div>
         <div class="ask" id="coreAsk">${askFor()}</div>
       </div>
-      ${state.tiles.map((t, i) => `<button class="tile" data-id="${t.id}"><span class="tn">Piste ${String(i + 1).padStart(2, '0')}</span>
+      ${state.tiles.map((t, i) => `<button class="tile" data-id="${t.id}"><span class="tn">Hypothèse ${String(i + 1).padStart(2, '0')}</span>
         <span class="tx">${t.text}</span><span class="sub"></span></button>`).join('')}
     </div>
     <aside class="side-panels">
@@ -394,16 +395,16 @@ function startWall() {
       <div class="cl-head"><span id="deckCount"></span><span id="deckCost"></span></div>
       <ol id="deck">${deckHtml()}</ol>
     </div>` : ''}
-    <!-- Journal d'enquête -->
+    <!-- Cahier de laboratoire -->
     <div class="caselog glass">
-      <h3>${icon('clipboard', 15)} Journal d'enquête</h3>
+      <h3>${icon('clipboard', 15)} Cahier de laboratoire</h3>
       <div class="cl-head"><span>Dossier ${solo() ? 'solo' : state.code}</span><span>${esc(DISEASE.name)} · ${DIFFS[state.scen.diff].name}</span></div>
       <ol id="caseLog">${logHtml()}</ol>
       <div class="cl-rule"><b>Règle</b>1 toucher = choisir · 2 touchers = valider</div>
     </div>
     </aside>
     </div>
-    <p class="wall-help" id="wallHelp">Touchez une piste pour la choisir, touchez-la encore pour valider.</p>`;
+    <p class="wall-help" id="wallHelp">Débattez entre disciplines, puis touchez une hypothèse pour la choisir et touchez-la encore pour la tester.</p>`;
   // Les couches trouvées aux niveaux précédents restent allumées
   state.foundIds.forEach(id => setLayer($('core'), id, true));
   $('wall').addEventListener('click', e => { const b = e.target.closest('.tile'); if (b) clickTile(b.dataset.id); });
@@ -412,7 +413,7 @@ function startWall() {
   // Compte à rebours, puis le chronomètre démarre
   state.over = true;
   const label = multi() ? `Niveau ${state.lvl + 1} · ${L.name}` : `Enquête sur ${esc(DISEASE.title)}`;
-  const sub = `${multi() ? '★'.repeat(L.stars) + ' · ' : ''}${state.tiles.length} pistes · ${'♥'.repeat(L.lives)}`;
+  const sub = `${multi() ? '★'.repeat(L.stars) + ' · ' : ''}${state.tiles.length} hypothèses · ${'♥'.repeat(L.lives)}`;
   countdown(label, sub, () => { state.over = false; startTimer(); });
 }
 
@@ -486,13 +487,13 @@ function clickTile(id) {
     setLayer($('core'), id, true);              // … et une couche s'allume sur la carte
     $('coreAsk').textContent = `Couche « ${SIG_LABELS[id]} » allumée : ${state.foundIds.size} sur ${GOAL}`;
     drawThreads(id);
-    toast(`Vraie cause : ${t.family.name}`, 'ok');
+    toast(`Hypothèse confirmée : ${t.family.name}`, 'ok');
     sfx('ok'); burst(el, t.family.color);
   } else {                                      // fausse piste : une vie en moins
     state.lives--; state.errors++;
     el.classList.add('ko');
     el.querySelector('.sub').textContent = t.why;
-    toast('Fausse piste ! ' + t.why, 'ko');
+    toast('Hypothèse réfutée : ' + t.why, 'ko');
     sfx('ko');
     document.body.classList.remove('hit'); void document.body.offsetWidth; document.body.classList.add('hit');
   }
@@ -572,7 +573,7 @@ function finish(reason) {
   $('coreAsk').textContent = ASK_ENDS[state.scen.seed % ASK_ENDS.length];
 
   const f = state.foundIds.size, win = f === GOAL;
-  const rank = win && state.errors === 0 ? "Enquêteurs d'élite" : win ? 'Fins limiers' : f >= 4 ? 'Sur la bonne piste' : 'Enquête à rouvrir';
+  const rank = win && state.errors === 0 ? "Laboratoire d'excellence" : win ? 'Équipe de recherche confirmée' : f >= 4 ? 'Résultats prometteurs' : 'Recherche à poursuivre';
   const status = multi() ? 'Les 3 niveaux sont terminés !'
     : reason === 'win' ? 'Toutes les causes sont trouvées !' : reason === 'lost' ? "Trois erreurs : l'enquête s'arrête." : 'Temps écoulé !';
   const legend = FAMILIES.map(fa => {
@@ -597,14 +598,16 @@ function finish(reason) {
         <span><b>Énigme finale : ${state.enigRes.ok ? 'résolue' : 'non résolue'}</b>
         Le camion de dépistage part pour <b>${state.enigRes.name}</b>. ${state.enigRes.conds} conditions, toutes indispensables :
         ${state.enigRes.ok ? "c'est en les mettant toutes ensemble que vous avez trouvé." : 'il manquait une voix dans la discussion.'}</span></div>` : ''}
+      ${articleHtml()}
       <div class="legend">${legend}</div>
       ${rumors.length ? `<div class="rumor-box"><b>${icon('news', 15)} Les rumeurs de cette partie</b>
         <p class="small">Ces indices ne venaient d'aucune discipline : ils poussaient vers de fausses pistes.</p>
         <ul>${rumors.map(c => `<li><span>${c.source}</span>${c.text}</li>`).join('')}</ul></div>` : ''}
       <p class="bigline">Chaque regard a allumé une couche. Personne n'avait la carte complète seul.</p>
       <ol class="qs">
-        <li>Quelle piste auriez-vous choisie sans les autres ?</li>
+        <li>Quelle hypothèse auriez-vous retenue sans les autres disciplines ?</li>
         <li>Quel indice vous a le plus surpris ?</li>
+        <li>Dans votre vraie recherche, avec quelle discipline aimeriez-vous travailler demain ?</li>
       </ol>
       <div class="center-actions">
         <button class="btn btn-red" id="again">${icon('restart')} Rejouer</button>
